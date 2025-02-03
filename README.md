@@ -71,12 +71,12 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 ![helpoffer page Screenshot](./screenshot/feed_help_offer1.png)
 ![helpoffer page Screenshot](./screenshot/feef_help_offer2.png)
 
-
 ## Contact
 
 Feel free to reach out with feedback or inquiries:
 
 - **Email**: [e.bryandze@gmail.com]
+- **X** : [https://x.com/dze_bryan]
 - **LinkedIn**: [www.linkedin.com/in/dzebryan237]
 - **GitHub**: [https://github.com/G-Bryan237]
 
