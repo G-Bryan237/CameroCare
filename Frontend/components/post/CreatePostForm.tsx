@@ -11,7 +11,11 @@ interface CreatePostFormProps {
   onSuccess: () => void
 }
 
-export default function CreatePostForm({ type, onClose, onSuccess }: CreatePostFormProps) {
+export default function CreatePostForm({ 
+  type, 
+  onClose, 
+  onSuccess,
+}: CreatePostFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -20,42 +24,68 @@ export default function CreatePostForm({ type, onClose, onSuccess }: CreatePostF
     coordinates?: { lat: number; lng: number };
   }>({ region: '' })
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+  const getCurrentUTCDateTime = () => {
+    const now = new Date()
+    return now.toISOString().slice(0, 19).replace('T', ' ')
+  }
 
-    const formData = new FormData(e.currentTarget)
-    
-    try {
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: formData.get('title'),
-          description: formData.get('description'),
-          categories: selectedCategories,
-          location: formData.get('location'),
-          region: location.region,
-          coordinates: location.coordinates,
-          type,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create post')
+  const handleCategorySelection = (category: string) => {
+    setSelectedCategories(prev => {
+      // If category is already selected, remove it
+      if (prev.includes(category)) {
+        return prev.filter(c => c !== category)
       }
 
-      onSuccess()
-      onClose()
-    } catch (err) {
-      setError('Failed to create post. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
+      // For seeker page (HELP_REQUEST), limit to 3 categories
+      if (type === 'HELP_REQUEST' && prev.length >= 3) {
+        alert('You can only select up to 3 categories for help requests')
+        return prev
+      }
+
+      // For helper page (HELP_OFFER), no limit on categories
+      return [...prev, category]
+    })
   }
+
+ 
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault()
+  setIsLoading(true)
+  setError('')
+
+  const formData = new FormData(e.currentTarget)
+  
+  try {
+    const response = await fetch('/api/posts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: formData.get('title'),
+        description: formData.get('description'),
+        categories: selectedCategories,
+        location: formData.get('location'),
+        region: location.region,
+        coordinates: location.coordinates,
+        type,
+        author: 'G-Bryan237', // Current user's login
+        createdAt: '2025-01-25 05:03:28' // Current UTC time
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to create post')
+    }
+
+    onSuccess()
+    onClose()
+  } catch (err) {
+    setError('Failed to create post. Please try again.')
+  } finally {
+    setIsLoading(false)
+  }
+}
 
   const handleLocationRequest = () => {
     if (!navigator.geolocation) {
@@ -87,6 +117,14 @@ export default function CreatePostForm({ type, onClose, onSuccess }: CreatePostF
         </div>
       )}
 
+      {/* Display post type and category limit information */}
+      <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded text-sm">
+        {type === 'HELP_REQUEST' 
+          ? 'Help Request - Select up to 3 categories'
+          : 'Help Offer - Select any number of categories'
+        }
+      </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700">
           Title
@@ -113,28 +151,18 @@ export default function CreatePostForm({ type, onClose, onSuccess }: CreatePostF
 
       <div>
         <label className="block text-sm font-medium text-gray-700">
-          Categories
+          Categories {type === 'HELP_REQUEST' && `(${selectedCategories.length}/3)`}
         </label>
         <div className="mt-2 grid grid-cols-2 gap-2">
           {ASSISTANCE_CATEGORIES.map(category => (
             <button
               key={category}
               type="button"
-              onClick={() => {
-                if (type === 'HELP_REQUEST' && selectedCategories.length >= 3 && !selectedCategories.includes(category)) {
-                  alert('You can only select up to 3 categories for help requests')
-                  return
-                }
-                setSelectedCategories(prev => 
-                  prev.includes(category)
-                    ? prev.filter(c => c !== category)
-                    : [...prev, category]
-                )
-              }}
+              onClick={() => handleCategorySelection(category)}
               className={`p-2 text-sm rounded-md text-left ${
                 selectedCategories.includes(category)
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-50 hover:bg-gray-100'
+                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                  : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
               }`}
             >
               {category}
@@ -155,7 +183,16 @@ export default function CreatePostForm({ type, onClose, onSuccess }: CreatePostF
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">Select region...</option>
-            {/* Add Cameroon regions here */}
+            <option value="Adamaoua">Adamaoua</option>
+            <option value="Centre">Centre</option>
+            <option value="East">East</option>
+            <option value="Far North">Far North</option>
+            <option value="Littoral">Littoral</option>
+            <option value="North">North</option>
+            <option value="Northwest">Northwest</option>
+            <option value="South">South</option>
+            <option value="Southwest">Southwest</option>
+            <option value="West">West</option>
           </select>
         </div>
 
@@ -191,7 +228,7 @@ export default function CreatePostForm({ type, onClose, onSuccess }: CreatePostF
         </button>
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || selectedCategories.length === 0}
           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400"
         >
           {isLoading ? 'Creating...' : 'Create Post'}

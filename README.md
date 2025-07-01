@@ -13,15 +13,6 @@ npm install @headlessui/react@^2.2.0 @heroicons/react@^2.2.0 @prisma/client@^6.2
 npm install -D @eslint/eslintrc@^3 @types/bcrypt@^5.0.2 @types/bcryptjs@^2.4.6 @types/lodash@^4.17.14 @types/next@^8.0.7 @types/node@^20 @types/react@^19 @types/react-dom@^19 eslint@^9 eslint-config-next@15.1.4 postcss@^8 tailwindcss@^3.4.1 typescript@^5
 
 ```
-## connecting with mongodb locally for the authentification
-create a database on the MongoDB compass 
-copy the string link (e.g "mongodb://localhost:27017/your-database")
-create a an environment variable .env.local and put :
-```javascript
-MONGODB_URI=mongodb://localhost:27017/CameroCare
-NEXTAUTH_URL=http://localhost:3000
-
-```
 
 If the package.json is properly configured and contains the dependencies, you can install them all at once by running:
 
@@ -45,6 +36,17 @@ bun dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+## connecting with mongodb locally for the authentification
+create a database on the MongoDB compass 
+copy the string link (e.g "mongodb://localhost:27017/your-database")
+create a an environment variable .env.local and put :
+```javascript
+MONGODB_URI=mongodb://localhost:27017/CameroCare
+NEXTAUTH_URL=http://localhost:3000
+
+```
+
 
 ## Technologies Used
 
