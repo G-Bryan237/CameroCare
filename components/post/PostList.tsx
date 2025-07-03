@@ -1,8 +1,8 @@
 // src/components/post/PostList.tsx
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation' // Changed from next/router
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   MapPin, 
   Share2, 
@@ -14,264 +14,81 @@ import {
   CheckCircle
 } from 'lucide-react'
 
-// Update Post interface to use participantCount instead of participants array
+// Update Post interface to match what we're actually getting
 interface Post {
-  id: number;
-  type: 'help' | 'offer';
-  title: string;
-  author: {
-    id: string;
-    name: string;
-    isAnonymous: boolean;
-    isVerified: boolean;
-    rating: number;
-  };
-  location: {
-    city: string;
-    region: string;
-    isUrgent: boolean;
-  };
-  categories: string[];
-  tags: string[];
-  description: string;
-  participantCount: number;
-  bookmarks: number;
-  status: 'open' | 'in-progress' | 'completed';
-  createdAt: string;
-  updatedAt: string;
-  lastActivityAt: string;
+  id: string
+  type: 'HELP_REQUEST' | 'HELP_OFFER'
+  title: string
+  description: string
+  categories: string[]
+  location?: string
+  region?: string
+  is_urgent?: boolean
+  status?: 'open' | 'in-progress' | 'completed'
+  participant_count?: number
+  bookmarks?: number
+  shares?: number
+  created_at: string
+  updated_at?: string
+  last_activity_at?: string
+  author_id: string
+  author?: {
+    id: string
+    name: string
+    avatar_url?: string
+  }
 }
 
-// Update sample posts
-const INITIAL_POSTS: Post[] = [
-  {
-    id: 1,
-    type: 'help',
-    title: "Need urgent assistance with temporary housing",
-    author: {
-      id: "user1",
-      name: "Sarah Chen",
-      isAnonymous: false,
-      isVerified: true,
-      rating: 4.8
-    },
-    location: {
-      city: "Douala",
-      region: "Littoral",
-      isUrgent: true
-    },
-    categories: ["Housing", "Urgent"],
-    tags: ["#Urgent", "#Housing", "#Temporary"],
-    description: "Looking for temporary housing for a family of 4 due to unexpected circumstances. Need safe accommodation for 2 weeks with basic amenities.",
-    participantCount: 12,
-    bookmarks: 25,
-    status: 'open',
-    createdAt: "2025-01-22 08:30:00",
-    updatedAt: "2025-01-22 09:40:35",
-    lastActivityAt: "2025-01-22 09:40:35"
-  },
-  {
-    id: 2,
-    type: 'offer',
-    title: "Free Math and Science Tutoring Available",
-    author: {
-      id: "user2",
-      name: "Robert Fang",
-      isAnonymous: false,
-      isVerified: true,
-      rating: 4.9
-    },
-    location: {
-      city: "Yaoundé",
-      region: "Centre",
-      isUrgent: false
-    },
-    categories: ["Education", "Academic"],
-    tags: ["#Education", "#STEM", "#Free"],
-    description: "Offering free tutoring in Mathematics and Science subjects. Available on weekends. Can help with high school and university level topics.",
-    participantCount: 8,
-    bookmarks: 15,
-    status: 'open',
-    createdAt: "2025-01-22 07:15:00",
-    updatedAt: "2025-01-22 09:35:30",
-    lastActivityAt: "2025-01-22 09:35:30"
-  },
-  {
-    id: 3,
-    type: 'help',
-    title: "Medical Transport Needed for Weekly Hospital Visits",
-    author: {
-      id: "user3",
-      name: "Marie Ndi",
-      isAnonymous: true,
-      isVerified: false,
-      rating: 4.5
-    },
-    location: {
-      city: "Bamenda",
-      region: "Northwest",
-      isUrgent: true
-    },
-    categories: ["Medical", "Transport"],
-    tags: ["#Medical", "#Transport", "#Weekly"],
-    description: "Need transport assistance for weekly hospital visits. Every Wednesday morning for the next month. Can contribute to fuel costs.",
-    participantCount: 4,
-    bookmarks: 8,
-    status: 'open',
-    createdAt: "2025-01-22 09:00:00",
-    updatedAt: "2025-01-22 09:42:00",
-    lastActivityAt: "2025-01-22 09:42:00"
-  },
-  {
-    id: 4,
-    type: 'offer',
-    title: "Weekend Food Distribution Event",
-    author: {
-      id: "user4",
-      name: "John Ekema",
-      isAnonymous: false,
-      isVerified: true,
-      rating: 5.0
-    },
-    location: {
-      city: "Buea",
-      region: "Southwest",
-      isUrgent: false
-    },
-    categories: ["Food", "Community"],
-    tags: ["#FoodDrive", "#Community", "#Weekend"],
-    description: "Organizing a food distribution event this weekend. Fresh produce and non-perishables available. Priority given to elderly and families with children.",
-    participantCount: 45,
-    bookmarks: 72,
-    status: 'open',
-    createdAt: "2025-01-22 06:15:00",
-    updatedAt: "2025-01-22 09:30:00",
-    lastActivityAt: "2025-01-22 09:30:00"
-  },
-  {
-    id: 5,
-    type: 'help',
-    title: "School Supplies Needed for Orphanage",
-    author: {
-      id: "user5",
-      name: "Alice Tamba",
-      isAnonymous: false,
-      isVerified: true,
-      rating: 4.7
-    },
-    location: {
-      city: "Limbe",
-      region: "Southwest",
-      isUrgent: false
-    },
-    categories: ["Education", "Children"],
-    tags: ["#SchoolSupplies", "#Children", "#Education"],
-    description: "Local orphanage needs school supplies for 25 children. Looking for notebooks, pens, pencils, and basic stationery items.",
-    participantCount: 28,
-    bookmarks: 45,
-    status: 'open',
-    createdAt: "2025-01-22 07:30:00",
-    updatedAt: "2025-01-22 09:25:00",
-    lastActivityAt: "2025-01-22 09:25:00"
-  },
-  {
-    id: 6,
-    type: 'offer',
-    title: "Free Legal Consultation for Small Businesses",
-    author: {
-      id: "user6",
-      name: "Paul Biya",
-      isAnonymous: false,
-      isVerified: true,
-      rating: 4.9
-    },
-    location: {
-      city: "Douala",
-      region: "Littoral",
-      isUrgent: false
-    },
-    categories: ["Legal", "Business"],
-    tags: ["#Legal", "#Business", "#Consultation"],
-    description: "Offering free 30-minute legal consultations for small business owners. Can help with registration, permits, and basic legal questions.",
-    participantCount: 15,
-    bookmarks: 33,
-    status: 'open',
-    createdAt: "2025-01-22 08:45:00",
-    updatedAt: "2025-01-22 09:20:00",
-    lastActivityAt: "2025-01-22 09:20:00"
-  },
-  {
-    id: 7,
-    type: 'help',
-    title: "Emergency Home Repair - Leaking Roof",
-    author: {
-      id: "user7",
-      name: "Emma Fouda",
-      isAnonymous: false,
-      isVerified: false,
-      rating: 4.3
-    },
-    location: {
-      city: "Yaoundé",
-      region: "Centre",
-      isUrgent: true
-    },
-    categories: ["Housing", "Maintenance"],
-    tags: ["#Emergency", "#Housing", "#Repair"],
-    description: "Urgent help needed with leaking roof before heavy rains. Single mother with three children. Can provide materials if needed.",
-    participantCount: 6,
-    bookmarks: 12,
-    status: 'open',
-    createdAt: "2025-01-22 09:10:00",
-    updatedAt: "2025-01-22 09:41:00",
-    lastActivityAt: "2025-01-22 09:41:00"
-  },
-  {
-    id: 8,
-    type: 'offer',
-    title: "IT Skills Training for Youth",
-    author: {
-      id: "user8",
-      name: "G-Bryan237",
-      isAnonymous: false,
-      isVerified: true,
-      rating: 4.8
-    },
-    location: {
-      city: "Buea",
-      region: "Southwest",
-      isUrgent: false
-    },
-    categories: ["Education", "Technology"],
-    tags: ["#IT", "#Youth", "#Training"],
-    description: "Organizing free IT skills training for youth (15-25 years). Topics include basic computer skills, web development, and digital literacy.",
-    participantCount: 32,
-    bookmarks: 55,
-    status: 'open',
-    createdAt: "2025-01-22 08:00:00",
-    updatedAt: "2025-01-22 09:15:00",
-    lastActivityAt: "2025-01-22 09:15:00"
-  }
-];
-
 interface PostCardProps {
-  post: Post;
+  post: Post
 }
 
 function PostCard({ post }: PostCardProps) {
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const router = useRouter();
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const router = useRouter()
 
-  const isPopular = post.participantCount >= 10;
-  const isRecent = new Date().getTime() - new Date(post.lastActivityAt).getTime() < 3600000;
+  const isPopular = (post.participant_count || 0) >= 10
+  const isRecent = new Date().getTime() - new Date(post.last_activity_at || post.created_at).getTime() < 3600000
+
+  // Get author info with better fallbacks
+  const getAuthorInfo = () => {
+    if (post.author) {
+      return {
+        name: post.author.name || 'Community Member',
+        avatar_url: post.author.avatar_url || null
+      }
+    }
+    
+    return {
+      name: 'Community Member',
+      avatar_url: null
+    }
+  }
+
+  const authorInfo = getAuthorInfo()
 
   const handleActionButton = () => {
-    router.push(`/chat/${post.author.id}?postId=${post.id}`);
-  };
+    router.push(`/posts/${post.id}`)
+  }
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      const now = new Date()
+      const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+      
+      if (diffInHours < 1) return 'Just now'
+      if (diffInHours < 24) return `${diffInHours}h ago`
+      if (diffInHours < 48) return '1 day ago'
+      return date.toLocaleDateString()
+    } catch (error) {
+      return 'Recently'
+    }
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      {post.location.isUrgent && (
+      {post.is_urgent && (
         <div className="bg-red-500 text-white px-4 py-2 text-sm font-medium text-center">
           Urgent Request
         </div>
@@ -282,34 +99,30 @@ function PostCard({ post }: PostCardProps) {
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="flex-shrink-0">
-              {post.author.isAnonymous ? (
-                <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center">
-                  <EyeOff className="h-6 w-6 text-gray-400" />
-                </div>
+              {authorInfo.avatar_url ? (
+                <img
+                  src={authorInfo.avatar_url}
+                  alt={authorInfo.name}
+                  className="h-10 w-10 rounded-full object-cover"
+                />
               ) : (
-                <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-lg font-medium text-white">
-                    {post.author.name.split(' ').map(n => n[0]).join('')}
+                <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-medium text-white">
+                    {authorInfo.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'CM'}
                   </span>
                 </div>
               )}
             </div>
-
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="text-lg font-medium text-gray-900">
-                  {post.author.isAnonymous ? 'Anonymous' : post.author.name}
-                </h3>
-                {post.author.isVerified && (
-                  <CheckCircle className="h-4 w-4 text-blue-500" />
-                )}
-                <span className="text-sm text-gray-500">★ {post.author.rating}</span>
+                <h4 className="font-medium text-gray-900">{authorInfo.name}</h4>
+                <CheckCircle className="h-4 w-4 text-blue-500" />
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-500">
                 <MapPin className="h-4 w-4" />
-                <span>{post.location.city}, {post.location.region}</span>
+                <span>{post.location || 'Cameroon'}, {post.region || 'Various Regions'}</span>
                 <span>•</span>
-                <span>{post.createdAt}</span>
+                <span>{formatDate(post.created_at)}</span>
               </div>
             </div>
           </div>
@@ -330,14 +143,9 @@ function PostCard({ post }: PostCardProps) {
           <p className="text-gray-600">{post.description}</p>
           
           <div className="mt-3 flex flex-wrap gap-2">
-            {post.categories.map(category => (
-              <span key={category} className="px-2.5 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-600">
+            {(post.categories || []).map((category, index) => (
+              <span key={`${category}-${index}`} className="px-2.5 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-600">
                 {category}
-              </span>
-            ))}
-            {post.tags.map(tag => (
-              <span key={tag} className="px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
-                {tag}
               </span>
             ))}
           </div>
@@ -349,7 +157,7 @@ function PostCard({ post }: PostCardProps) {
             {/* Participants count */}
             <div className="flex items-center space-x-2 text-gray-500">
               <Users className="h-5 w-5" />
-              <span className="text-sm">{post.participantCount} Participants</span>
+              <span className="text-sm">{post.participant_count || 0} Participants</span>
             </div>
 
             <button
@@ -359,53 +167,116 @@ function PostCard({ post }: PostCardProps) {
               } hover:text-yellow-500 transition-colors`}
             >
               <Bookmark className={`h-5 w-5 ${isBookmarked ? 'fill-current' : ''}`} />
-              <span className="text-sm">{post.bookmarks + (isBookmarked ? 1 : 0)}</span>
+              <span className="text-sm">{(post.bookmarks || 0) + (isBookmarked ? 1 : 0)}</span>
             </button>
 
             <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
               <Share2 className="h-5 w-5" />
               <span className="text-sm">Share</span>
             </button>
-
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-red-500 transition-colors">
-              <Flag className="h-5 w-5" />
-              <span className="text-sm">Report</span>
-            </button>
           </div>
 
           <button 
             onClick={handleActionButton}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
           >
-            {post.type === 'help' ? 'Offer Help' : 'Request Info'}
+            {post.type === 'HELP_REQUEST' ? 'Offer Help' : 'Learn More'}
           </button>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 export default function PostList({ type, categories }: { type: 'help' | 'offer', categories: string[] | null }) {
-  const [posts] = useState<Post[]>(INITIAL_POSTS);
-  const [sortBy, setSortBy] = useState<'recent' | 'urgent' | 'popular'>('recent');
+  const [posts, setPosts] = useState<Post[]>([])
+  const [sortBy, setSortBy] = useState<'recent' | 'urgent' | 'popular'>('recent')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredPosts = posts
-    .filter(post => {
-      const matchesType = post.type === type;
-      const matchesCategories = !categories || categories.length === 0 || 
-        post.categories.some(cat => categories.includes(cat));
-      return matchesType && matchesCategories;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'urgent':
-          return (b.location.isUrgent ? 1 : 0) - (a.location.isUrgent ? 1 : 0);
-        case 'popular':
-          return b.participantCount - a.participantCount;
-        default:
-          return new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime();
+  useEffect(() => {
+    fetchPosts()
+  }, [type, categories, sortBy])
+
+  const fetchPosts = async () => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const params = new URLSearchParams()
+      
+      // Map type to API format
+      if (type === 'help') {
+        params.append('type', 'help')
+      } else if (type === 'offer') {
+        params.append('type', 'offer')
       }
-    });
+      
+      // Add category filter if specified
+      if (categories && categories.length > 0 && categories[0] !== 'All') {
+        params.append('category', categories[0])
+      }
+
+      console.log('Fetching posts with params:', params.toString())
+
+      const response = await fetch(`/api/posts?${params.toString()}`)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('API Error Response:', errorText)
+        throw new Error(`Failed to fetch posts: ${response.status} ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      console.log('Fetched posts data:', data)
+      
+      // Ensure data is an array
+      const postsArray = Array.isArray(data) ? data : []
+      
+      // Sort posts based on sortBy preference
+      const sortedPosts = [...postsArray].sort((a, b) => {
+        switch (sortBy) {
+          case 'urgent':
+            return (b.is_urgent ? 1 : 0) - (a.is_urgent ? 1 : 0)
+          case 'popular':
+            return (b.participant_count || 0) - (a.participant_count || 0)
+          default: // recent
+            const aTime = new Date(a.last_activity_at || a.created_at).getTime()
+            const bTime = new Date(b.last_activity_at || b.created_at).getTime()
+            return bTime - aTime
+        }
+      })
+      
+      setPosts(sortedPosts)
+    } catch (err) {
+      console.error('Error fetching posts:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load posts. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600 mb-4">{error}</p>
+        <button 
+          onClick={fetchPosts}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Try Again
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -428,15 +299,16 @@ export default function PostList({ type, categories }: { type: 'help' | 'offer',
 
       {/* Posts */}
       <div className="space-y-6 px-4">
-        {filteredPosts.map((post) => (
+        {posts.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
-        {filteredPosts.length === 0 && (
+
+        {posts.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             No posts found for the selected filters.
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }
