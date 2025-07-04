@@ -11,7 +11,13 @@ import {
   Flag,
   TrendingUp,
   Users,
-  CheckCircle
+  CheckCircle,
+  Clock,
+  X,
+  Facebook,
+  Twitter,
+  MessageCircle,
+  Instagram
 } from 'lucide-react'
 
 // Update Post interface to match what we're actually getting
@@ -45,22 +51,42 @@ interface PostCardProps {
 
 function PostCard({ post }: PostCardProps) {
   const [isBookmarked, setIsBookmarked] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [localBookmarks, setLocalBookmarks] = useState(post.bookmarks || 0)
+  const [localShares, setLocalShares] = useState(post.shares || 0)
   const router = useRouter()
 
   const isPopular = (post.participant_count || 0) >= 10
   const isRecent = new Date().getTime() - new Date(post.last_activity_at || post.created_at).getTime() < 3600000
 
+  // Check if user has bookmarked this post
+  useEffect(() => {
+    const checkBookmarkStatus = async () => {
+      try {
+        const response = await fetch(`/api/posts/${post.id}/bookmark`)
+        if (response.ok) {
+          const result = await response.json()
+          setIsBookmarked(result.isBookmarked)
+        }
+      } catch (error) {
+        console.error('Error checking bookmark status:', error)
+      }
+    }
+    
+    checkBookmarkStatus()
+  }, [post.id])
+
   // Get author info with better fallbacks
   const getAuthorInfo = () => {
     if (post.author) {
       return {
-        name: post.author.name || 'Community Member',
+        name: post.author.name || 'Anonymous User',
         avatar_url: post.author.avatar_url || null
       }
     }
     
     return {
-      name: 'Community Member',
+      name: 'Anonymous User',
       avatar_url: null
     }
   }
@@ -71,18 +97,141 @@ function PostCard({ post }: PostCardProps) {
     router.push(`/posts/${post.id}`)
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDateTime = (dateString: string) => {
     try {
       const date = new Date(dateString)
       const now = new Date()
-      const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+      const diffInHours = Math.floor(diffInMinutes / 60)
+      const diffInDays = Math.floor(diffInHours / 24)
       
-      if (diffInHours < 1) return 'Just now'
-      if (diffInHours < 24) return `${diffInHours}h ago`
-      if (diffInHours < 48) return '1 day ago'
-      return date.toLocaleDateString()
+      // Format time
+      const timeString = date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      })
+      
+      // Format date with time
+      if (diffInMinutes < 1) return 'Just now'
+      if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+      if (diffInHours < 24) return `${diffInHours}h ago • ${timeString}`
+      if (diffInDays === 1) return `Yesterday • ${timeString}`
+      if (diffInDays < 7) return `${diffInDays} days ago • ${timeString}`
+      
+      return `${date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      })} • ${timeString}`
     } catch (error) {
       return 'Recently'
+    }
+  }
+
+  const handleBookmark = async () => {
+    try {
+      const newBookmarkedState = !isBookmarked
+      const originalBookmarks = localBookmarks
+      const originalBookmarkedState = isBookmarked
+      
+      // Optimistically update UI
+      setIsBookmarked(newBookmarkedState)
+      setLocalBookmarks(prev => newBookmarkedState ? prev + 1 : prev - 1)
+      
+      // Make API call to update the bookmark
+      const response = await fetch(`/api/posts/${post.id}/bookmark`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: newBookmarkedState ? 'bookmark' : 'unbookmark'
+        })
+      })
+
+      if (!response.ok) {
+        const errorResponse = await response.json().catch(() => ({}))
+        console.error('Bookmark API Error:', errorResponse)
+        throw new Error(`Failed to update bookmark: ${errorResponse.error || 'Unknown error'}`)
+      }
+
+      const result = await response.json()
+      setLocalBookmarks(result.bookmarks)
+      setIsBookmarked(result.isBookmarked)
+      
+    } catch (error) {
+      console.error('Error bookmarking post:', error)
+      // Revert on error
+      setIsBookmarked(isBookmarked)
+      setLocalBookmarks(post.bookmarks || 0)
+    }
+  }
+
+  const handleShare = async (platform?: string) => {
+    const postUrl = `${window.location.origin}/posts/${post.id}`
+    const text = `Check out this ${post.type === 'HELP_REQUEST' ? 'help request' : 'help offer'}: ${post.title}`
+    
+    if (platform) {
+      let shareUrl = ''
+      
+      switch (platform) {
+        case 'twitter':
+          shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(postUrl)}`
+          break
+        case 'facebook':
+          shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`
+          break
+        case 'whatsapp':
+          shareUrl = `https://wa.me/?text=${encodeURIComponent(`${text} ${postUrl}`)}`
+          break
+        case 'instagram':
+          // Instagram doesn't support direct sharing, so copy to clipboard
+          navigator.clipboard.writeText(`${text} ${postUrl}`)
+          alert('Link copied to clipboard! You can now paste it in Instagram.')
+          await updateShareCount('instagram')
+          setShowShareModal(false)
+          return
+        case 'copy':
+          // Handle copy link
+          navigator.clipboard.writeText(postUrl)
+          alert('Link copied to clipboard!')
+          await updateShareCount('copy')
+          setShowShareModal(false)
+          return
+      }
+      
+      if (shareUrl) {
+        window.open(shareUrl, '_blank', 'width=600,height=400')
+        await updateShareCount(platform)
+        setShowShareModal(false)
+      }
+    } else {
+      setShowShareModal(true)
+    }
+  }
+
+  const updateShareCount = async (platform: string) => {
+    try {
+      const response = await fetch(`/api/posts/${post.id}/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ platform })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setLocalShares(result.shares)
+      } else {
+        // Fallback to local increment if API fails
+        setLocalShares(prev => prev + 1)
+      }
+    } catch (error) {
+      console.error('Error updating share count:', error)
+      // Fallback to local increment if API fails
+      setLocalShares(prev => prev + 1)
     }
   }
 
@@ -120,9 +269,16 @@ function PostCard({ post }: PostCardProps) {
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-500">
                 <MapPin className="h-4 w-4" />
-                <span>{post.location || 'Cameroon'}, {post.region || 'Various Regions'}</span>
+                <span>{post.location || 'Location not specified'}</span>
+                {post.region && (
+                  <>
+                    <span>•</span>
+                    <span>{post.region}</span>
+                  </>
+                )}
                 <span>•</span>
-                <span>{formatDate(post.created_at)}</span>
+                <Clock className="h-4 w-4" />
+                <span>{formatDateTime(post.created_at)}</span>
               </div>
             </div>
           </div>
@@ -161,18 +317,23 @@ function PostCard({ post }: PostCardProps) {
             </div>
 
             <button
-              onClick={() => setIsBookmarked(!isBookmarked)}
+              onClick={handleBookmark}
               className={`flex items-center space-x-2 ${
                 isBookmarked ? 'text-yellow-500' : 'text-gray-500'
               } hover:text-yellow-500 transition-colors`}
+              title={`${localBookmarks} people saved this post`}
             >
               <Bookmark className={`h-5 w-5 ${isBookmarked ? 'fill-current' : ''}`} />
-              <span className="text-sm">{(post.bookmarks || 0) + (isBookmarked ? 1 : 0)}</span>
+              <span className="text-sm">{localBookmarks} saved</span>
             </button>
 
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
+            <button 
+              onClick={() => handleShare()}
+              className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors"
+              title={`Shared ${localShares} times`}
+            >
               <Share2 className="h-5 w-5" />
-              <span className="text-sm">Share</span>
+              <span className="text-sm">{localShares} shares</span>
             </button>
           </div>
 
@@ -184,6 +345,75 @@ function PostCard({ post }: PostCardProps) {
           </button>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Share this post</h3>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => handleShare('facebook')}
+                  className="flex items-center justify-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Facebook className="h-5 w-5 text-blue-600" />
+                  <span className="font-medium">Facebook</span>
+                </button>
+
+                <button
+                  onClick={() => handleShare('twitter')}
+                  className="flex items-center justify-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Twitter className="h-5 w-5 text-blue-400" />
+                  <span className="font-medium">Twitter</span>
+                </button>
+
+                <button
+                  onClick={() => handleShare('whatsapp')}
+                  className="flex items-center justify-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <MessageCircle className="h-5 w-5 text-green-500" />
+                  <span className="font-medium">WhatsApp</span>
+                </button>
+
+                <button
+                  onClick={() => handleShare('instagram')}
+                  className="flex items-center justify-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Instagram className="h-5 w-5 text-pink-500" />
+                  <span className="font-medium">Instagram</span>
+                </button>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={async () => {
+                    const postUrl = `${window.location.origin}/posts/${post.id}`
+                    navigator.clipboard.writeText(postUrl)
+                    await updateShareCount('copy')
+                    alert('Link copied to clipboard!')
+                    setShowShareModal(false)
+                  }}
+                  className="w-full flex items-center justify-center space-x-2 p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <Share2 className="h-5 w-5 text-gray-600" />
+                  <span className="font-medium text-gray-900">Copy Link</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -281,7 +511,7 @@ export default function PostList({ type, categories }: { type: 'help' | 'offer',
   return (
     <div className="space-y-6">
       {/* Sort Options */}
-      <div className="flex justify-end space-x-2 px-4">
+      <div className="flex justify-end space-x-2 mb-2">
         {(['recent', 'urgent', 'popular'] as const).map((option) => (
           <button
             key={option}
@@ -298,7 +528,7 @@ export default function PostList({ type, categories }: { type: 'help' | 'offer',
       </div>
 
       {/* Posts */}
-      <div className="space-y-6 px-4">
+      <div className="space-y-6">
         {posts.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}

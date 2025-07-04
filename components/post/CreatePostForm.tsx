@@ -74,16 +74,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       coordinates: location.coordinates,
       type,
       // Handle urgency checkbox
-      isUrgent: type === 'HELP_REQUEST' ? formData.get('urgent') === 'on' : false,
+      is_urgent: type === 'HELP_REQUEST' ? formData.get('urgent') === 'on' : false,
       // Database fields for tracking
-      participantCount: 0,
+      participant_count: 0,
       participants: [],
-      shares: 0,
       bookmarks: 0,
-      status: 'open',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastActivityAt: new Date().toISOString()
+      shares: 0,
+      status: 'open'
     }
 
     console.log('Submitting post data:', postData)
@@ -97,13 +94,25 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       body: JSON.stringify(postData),
     })
 
-    const result = await response.json()
+    console.log('Response status:', response.status)
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+
+    let result
+    try {
+      const responseText = await response.text()
+      console.log('Raw response:', responseText)
+      result = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error('Failed to parse response as JSON:', parseError)
+      throw new Error(`Server returned invalid response (Status: ${response.status})`)
+    }
 
     if (!response.ok) {
+      console.error('API Error Response:', result)
       if (response.status === 401) {
         throw new Error('Please sign in to create a post')
       }
-      throw new Error(result.message || `HTTP ${response.status}: Failed to create post`)
+      throw new Error(result.message || result.error || `HTTP ${response.status}: Failed to create post`)
     }
 
     console.log('Post created successfully:', result)

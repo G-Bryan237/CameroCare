@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { HeartIcon as HandHeart, UserGroupIcon as Users, NewspaperIcon } from '@heroicons/react/20/solid';
 import Link from 'next/link';
-import AuthWrapper from '@/components/AuthWrapper';
 import Logo from '@/components/logo';
 import LogoutButton from '@/components/LogoutButton';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,7 +39,6 @@ export default function Home() {
   return null;
 
   return (
-    <AuthWrapper>
       <div className="min-h-screen bg-gray-50">
         {/* Header with Logo and Title only */}
         <header className="bg-white shadow-sm flex justify-between items-center">
@@ -155,6 +153,5 @@ export default function Home() {
           </div>
         </main>
       </div>
-    </AuthWrapper>
   );
 }

@@ -73,50 +73,122 @@ export async function GET(request: NextRequest) {
 // Keep your existing POST method
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-    const body = await request.json()
+    console.log('POST /api/posts - Starting request processing')
     
-    // Get current user
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) {
+    const supabase = createRouteHandlerClient({ cookies })
+    
+    // Get current user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    console.log('Session check:', { 
+      hasSession: !!session, 
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      sessionError: sessionError?.message 
+    })
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError)
       return NextResponse.json(
-        { message: 'Unauthorized' },
+        { message: 'Authentication error', error: sessionError.message },
+        { status: 401 }
+      )
+    }
+    
+    if (!session?.user) {
+      console.error('No authenticated user found')
+      return NextResponse.json(
+        { message: 'Unauthorized - Please sign in to create a post' },
         { status: 401 }
       )
     }
 
-    // Add author_id and timestamps
+    // Parse request body
+    let body
+    try {
+      body = await request.json()
+      console.log('Received post data:', body)
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError)
+      return NextResponse.json(
+        { message: 'Invalid request body - must be valid JSON' },
+        { status: 400 }
+      )
+    }
+
+    // Validate required fields
+    const requiredFields = ['title', 'description', 'categories', 'region', 'type']
+    const missingFields = requiredFields.filter(field => !body[field])
+    
+    if (missingFields.length > 0) {
+      console.error('Missing required fields:', missingFields)
+      return NextResponse.json(
+        { message: `Missing required fields: ${missingFields.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
+    // Validate categories array
+    if (!Array.isArray(body.categories) || body.categories.length === 0) {
+      console.error('Invalid categories:', body.categories)
+      return NextResponse.json(
+        { message: 'Categories must be a non-empty array' },
+        { status: 400 }
+      )
+    }
+
+    // Prepare post data for database
     const postData = {
-      ...body,
+      title: String(body.title).trim(),
+      description: String(body.description).trim(),
+      categories: body.categories,
+      location: body.location ? String(body.location).trim() : null,
+      region: String(body.region).trim(),
+      coordinates: body.coordinates || null,
+      type: body.type,
+      is_urgent: Boolean(body.is_urgent),
       author_id: session.user.id,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      last_activity_at: new Date().toISOString(),
       participant_count: 0,
       bookmarks: 0,
       shares: 0,
-      status: 'open'
+      status: 'open',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      last_activity_at: new Date().toISOString()
     }
 
-    const { data, error } = await supabase
+    console.log('Prepared post data for database:', postData)
+
+    // Insert into database
+    const { data, error: insertError } = await supabase
       .from('posts')
       .insert([postData])
       .select()
       .single()
 
-    if (error) {
-      console.error('Error creating post:', error)
+    if (insertError) {
+      console.error('Database insert error:', insertError)
       return NextResponse.json(
-        { message: 'Failed to create post', error: error.message },
+        { 
+          message: 'Failed to create post in database', 
+          error: insertError.message,
+          details: insertError 
+        },
         { status: 500 }
       )
     }
 
+    console.log('Post created successfully:', data)
     return NextResponse.json(data, { status: 201 })
+
   } catch (error) {
-    console.error('Error in POST /api/posts:', error)
+    console.error('Unexpected error in POST /api/posts:', error)
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { 
+        message: 'Internal server error', 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: error 
+      },
       { status: 500 }
     )
   }

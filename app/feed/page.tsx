@@ -345,13 +345,11 @@ export default function FeedPage() {
           </div>
 
           {/* Posts */}
-          <div className="bg-white rounded-xl shadow-lg">
-            <PostList 
-              key={refreshKey}
-              type={activeTab} 
-              categories={selectedCategory === 'All' ? null : [selectedCategory]} 
-            />
-          </div>
+          <PostList 
+            key={refreshKey}
+            type={activeTab} 
+            categories={selectedCategory === 'All' ? null : [selectedCategory]} 
+          />
         </main>
       </div>
 
