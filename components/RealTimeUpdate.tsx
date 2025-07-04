@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react'
 import socket from '@/lib/socket'
-import { useUser } from '@/contexts/UserContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface UpdateEvent {
   type: 'NEW_POST' | 'NEW_VOLUNTEER' | 'POST_UPDATE'
@@ -11,11 +11,13 @@ interface UpdateEvent {
 }
 
 export default function RealTimeUpdates({ onUpdate }: { onUpdate: (event: UpdateEvent) => void }) {
-  const { currentUser } = useUser()
+  const { user } = useAuth()
 
   useEffect(() => {
+    if (!user) return
+
     socket.connect()
-    socket.emit('join', { userId: currentUser.login })
+    socket.emit('join', { userId: user.id })
 
     socket.on('update', (event: UpdateEvent) => {
       onUpdate(event)
@@ -24,7 +26,7 @@ export default function RealTimeUpdates({ onUpdate }: { onUpdate: (event: Update
     return () => {
       socket.disconnect()
     }
-  }, [currentUser.login, onUpdate])
+  }, [user?.id, onUpdate])
 
   return null
 }

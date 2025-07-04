@@ -25,7 +25,7 @@ export async function GET(
       .select('id')
       .eq('user_id', session.user.id)
       .eq('post_id', postId)
-      .maybeSingle() // Use maybeSingle() instead of single()
+      .maybeSingle()
 
     if (bookmarkError) {
       console.error('Error checking bookmark status:', bookmarkError)
@@ -63,21 +63,6 @@ export async function POST(
     }
 
     const postId = params.id
-    const { action } = await request.json() // 'bookmark' or 'unbookmark'
-
-    // First check if the post exists
-    const { data: post, error: postError } = await supabase
-      .from('posts')
-      .select('bookmarks')
-      .eq('id', postId)
-      .single()
-
-    if (postError || !post) {
-      return NextResponse.json(
-        { message: 'Post not found' },
-        { status: 404 }
-      )
-    }
 
     // Check if user has already bookmarked this post
     const { data: existingBookmark, error: bookmarkError } = await supabase
@@ -85,7 +70,7 @@ export async function POST(
       .select('id')
       .eq('user_id', session.user.id)
       .eq('post_id', postId)
-      .maybeSingle() // Use maybeSingle() instead of single()
+      .maybeSingle()
 
     if (bookmarkError) {
       console.error('Error checking existing bookmark:', bookmarkError)
@@ -95,9 +80,10 @@ export async function POST(
       )
     }
 
-    let newBookmarkCount = post.bookmarks || 0
+    let isBookmarked = !!existingBookmark
+    let newBookmarkCount = 0
 
-    if (action === 'bookmark' && !existingBookmark) {
+    if (!existingBookmark) {
       // Add bookmark
       const { error: insertError } = await supabase
         .from('user_bookmarks')
@@ -115,8 +101,50 @@ export async function POST(
         )
       }
 
-      newBookmarkCount += 1
-    } else if (action === 'unbookmark' && existingBookmark) {
+      // Try to increment bookmark count using database function
+      const { data: updatedCount, error: updateError } = await supabase
+        .rpc('increment_bookmarks', { p_post_id: postId })
+
+      if (updateError) {
+        console.error('Database function error, falling back to manual update:', updateError)
+        
+        // Fallback: manually increment bookmarks
+        const { data: currentPost } = await supabase
+          .from('posts')
+          .select('bookmarks')
+          .eq('id', postId)
+          .single()
+        
+        const currentBookmarks = currentPost?.bookmarks || 0
+        
+        const { data: fallbackResult, error: fallbackError } = await supabase
+          .from('posts')
+          .update({ bookmarks: currentBookmarks + 1 })
+          .eq('id', postId)
+          .select('bookmarks')
+          .single()
+        
+        if (fallbackError) {
+          // Clean up the bookmark if update fails
+          await supabase
+            .from('user_bookmarks')
+            .delete()
+            .eq('user_id', session.user.id)
+            .eq('post_id', postId)
+          
+          return NextResponse.json(
+            { message: 'Failed to update bookmark count', error: fallbackError.message },
+            { status: 500 }
+          )
+        }
+        
+        newBookmarkCount = fallbackResult.bookmarks
+      } else {
+        newBookmarkCount = updatedCount || 1
+      }
+
+      isBookmarked = true
+    } else {
       // Remove bookmark
       const { error: deleteError } = await supabase
         .from('user_bookmarks')
@@ -132,35 +160,60 @@ export async function POST(
         )
       }
 
-      newBookmarkCount = Math.max(0, newBookmarkCount - 1)
+      // Try to decrement bookmark count using database function
+      const { data: updatedCount, error: updateError } = await supabase
+        .rpc('decrement_bookmarks', { p_post_id: postId })
+
+      if (updateError) {
+        console.error('Database function error, falling back to manual update:', updateError)
+        
+        // Fallback: manually decrement bookmarks
+        const { data: currentPost } = await supabase
+          .from('posts')
+          .select('bookmarks')
+          .eq('id', postId)
+          .single()
+        
+        const currentBookmarks = currentPost?.bookmarks || 0
+        
+        const { error: fallbackError } = await supabase
+          .from('posts')
+          .update({ bookmarks: Math.max(0, currentBookmarks - 1) })
+          .eq('id', postId)
+        
+        if (fallbackError) {
+          console.error('Fallback update failed:', fallbackError)
+        }
+        
+        newBookmarkCount = Math.max(0, currentBookmarks - 1)
+      } else {
+        newBookmarkCount = Math.max(0, updatedCount || 0)
+      }
+
+      isBookmarked = false
     }
 
-    // Update the post's bookmark count
-    const { data: updatedPost, error: updateError } = await supabase
+    // Get the actual current bookmark count from the database
+    const { data: currentPost, error: fetchError } = await supabase
       .from('posts')
-      .update({ bookmarks: newBookmarkCount })
-      .eq('id', postId)
       .select('bookmarks')
-      .maybeSingle() // Use maybeSingle() instead of single()
+      .eq('id', postId)
+      .single()
 
-    if (updateError) {
-      console.error('Error updating bookmark count:', updateError)
-      return NextResponse.json(
-        { message: 'Failed to update bookmark count', error: updateError.message, details: updateError },
-        { status: 500 }
-      )
+    if (!fetchError && currentPost) {
+      newBookmarkCount = currentPost.bookmarks || 0
     }
 
     return NextResponse.json({
       success: true,
       bookmarks: newBookmarkCount,
-      isBookmarked: action === 'bookmark'
+      isBookmarked: isBookmarked
     })
 
   } catch (error) {
     console.error('Error handling bookmark:', error)
     return NextResponse.json(
-      { message: 'Internal server error', error: error instanceof Error ? error.message : 'Unknown error', details: error },
+      { message: 'Internal server error', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

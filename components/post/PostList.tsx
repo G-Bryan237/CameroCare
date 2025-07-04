@@ -54,6 +54,8 @@ function PostCard({ post }: PostCardProps) {
   const [showShareModal, setShowShareModal] = useState(false)
   const [localBookmarks, setLocalBookmarks] = useState(post.bookmarks || 0)
   const [localShares, setLocalShares] = useState(post.shares || 0)
+  const [isBookmarkLoading, setIsBookmarkLoading] = useState(false)
+  const [hasShared, setHasShared] = useState(false)
   const router = useRouter()
 
   const isPopular = (post.participant_count || 0) >= 10
@@ -85,8 +87,9 @@ function PostCard({ post }: PostCardProps) {
       }
     }
     
+    // If no author object, try to get from user metadata or create fallback
     return {
-      name: 'Anonymous User',
+      name: 'Community Member',
       avatar_url: null
     }
   }
@@ -130,16 +133,19 @@ function PostCard({ post }: PostCardProps) {
   }
 
   const handleBookmark = async () => {
+    if (isBookmarkLoading) return // Prevent multiple rapid clicks
+    
+    setIsBookmarkLoading(true)
+    const originalBookmarkedState = isBookmarked
+    const originalBookmarkCount = localBookmarks
+    
     try {
-      const newBookmarkedState = !isBookmarked
-      const originalBookmarks = localBookmarks
-      const originalBookmarkedState = isBookmarked
-      
       // Optimistically update UI
+      const newBookmarkedState = !isBookmarked
       setIsBookmarked(newBookmarkedState)
-      setLocalBookmarks(prev => newBookmarkedState ? prev + 1 : prev - 1)
+      setLocalBookmarks(prev => newBookmarkedState ? prev + 1 : Math.max(0, prev - 1))
       
-      // Make API call to update the bookmark
+      // Make API call
       const response = await fetch(`/api/posts/${post.id}/bookmark`, {
         method: 'POST',
         headers: {
@@ -157,14 +163,21 @@ function PostCard({ post }: PostCardProps) {
       }
 
       const result = await response.json()
+      
+      // Update with actual values from server
       setLocalBookmarks(result.bookmarks)
       setIsBookmarked(result.isBookmarked)
       
     } catch (error) {
       console.error('Error bookmarking post:', error)
-      // Revert on error
-      setIsBookmarked(isBookmarked)
-      setLocalBookmarks(post.bookmarks || 0)
+      // Revert optimistic updates on error
+      setIsBookmarked(originalBookmarkedState)
+      setLocalBookmarks(originalBookmarkCount)
+      
+      // Show user-friendly error message
+      alert('Failed to update bookmark. Please try again.')
+    } finally {
+      setIsBookmarkLoading(false)
     }
   }
 
@@ -224,14 +237,25 @@ function PostCard({ post }: PostCardProps) {
       if (response.ok) {
         const result = await response.json()
         setLocalShares(result.shares)
+        
+        // Track if this user has shared this post
+        if (result.isFirstShare) {
+          setHasShared(true)
+        }
       } else {
-        // Fallback to local increment if API fails
-        setLocalShares(prev => prev + 1)
+        // Only increment locally if API fails and user hasn't shared before
+        if (!hasShared) {
+          setLocalShares(prev => prev + 1)
+          setHasShared(true)
+        }
       }
     } catch (error) {
       console.error('Error updating share count:', error)
-      // Fallback to local increment if API fails
-      setLocalShares(prev => prev + 1)
+      // Only increment locally if API fails and user hasn't shared before
+      if (!hasShared) {
+        setLocalShares(prev => prev + 1)
+        setHasShared(true)
+      }
     }
   }
 
@@ -255,7 +279,11 @@ function PostCard({ post }: PostCardProps) {
                   className="h-10 w-10 rounded-full object-cover"
                 />
               ) : (
-                <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                  post.type === 'HELP_REQUEST' 
+                    ? 'bg-gradient-to-br from-red-500 to-red-600' 
+                    : 'bg-gradient-to-br from-blue-500 to-blue-600'
+                }`}>
                   <span className="text-sm font-medium text-white">
                     {authorInfo.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'CM'}
                   </span>
@@ -265,7 +293,9 @@ function PostCard({ post }: PostCardProps) {
             <div>
               <div className="flex items-center space-x-2">
                 <h4 className="font-medium text-gray-900">{authorInfo.name}</h4>
-                <CheckCircle className="h-4 w-4 text-blue-500" />
+                <CheckCircle className={`h-4 w-4 ${
+                  post.type === 'HELP_REQUEST' ? 'text-red-500' : 'text-blue-500'
+                }`} />
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-500">
                 <MapPin className="h-4 w-4" />
@@ -300,7 +330,11 @@ function PostCard({ post }: PostCardProps) {
           
           <div className="mt-3 flex flex-wrap gap-2">
             {(post.categories || []).map((category, index) => (
-              <span key={`${category}-${index}`} className="px-2.5 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-600">
+              <span key={`${category}-${index}`} className={`px-2.5 py-1 rounded-full text-sm font-medium ${
+                post.type === 'HELP_REQUEST' 
+                  ? 'bg-red-50 text-red-600' 
+                  : 'bg-blue-50 text-blue-600'
+              }`}>
                 {category}
               </span>
             ))}
@@ -318,13 +352,18 @@ function PostCard({ post }: PostCardProps) {
 
             <button
               onClick={handleBookmark}
+              disabled={isBookmarkLoading}
               className={`flex items-center space-x-2 ${
                 isBookmarked ? 'text-yellow-500' : 'text-gray-500'
-              } hover:text-yellow-500 transition-colors`}
+              } hover:text-yellow-500 transition-colors ${
+                isBookmarkLoading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
               title={`${localBookmarks} people saved this post`}
             >
               <Bookmark className={`h-5 w-5 ${isBookmarked ? 'fill-current' : ''}`} />
-              <span className="text-sm">{localBookmarks} saved</span>
+              <span className="text-sm">
+                {isBookmarkLoading ? 'Saving...' : `${localBookmarks} saved`}
+              </span>
             </button>
 
             <button 
@@ -339,7 +378,11 @@ function PostCard({ post }: PostCardProps) {
 
           <button 
             onClick={handleActionButton}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            className={`px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium ${
+              post.type === 'HELP_REQUEST' 
+                ? 'bg-red-600 hover:bg-red-700' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
             {post.type === 'HELP_REQUEST' ? 'Offer Help' : 'Learn More'}
           </button>

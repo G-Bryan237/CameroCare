@@ -272,7 +272,7 @@ export default function FeedPage() {
                 onClick={() => setActiveTab('help')}
                 className={`py-2.5 px-6 rounded-md text-sm font-medium transition-colors ${
                   activeTab === 'help'
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'bg-red-100 text-red-700'
                     : 'hover:bg-gray-100'
                 }`}
               >
@@ -383,8 +383,11 @@ export default function FeedPage() {
       {/* Floating Create Button */}
       <button
         onClick={handleCreatePost}
-        className="fixed bottom-8 left-8 bg-blue-600 hover:bg-blue-700 text-white 
-                 rounded-full p-4 shadow-lg hover:shadow-xl transition-all z-30"
+        className={`fixed bottom-8 left-8 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all z-30 ${
+          activeTab === 'help' 
+            ? 'bg-red-600 hover:bg-red-700' 
+            : 'bg-blue-600 hover:bg-blue-700'
+        }`}
       >
         <PlusIcon className="h-6 w-6" />
       </button>

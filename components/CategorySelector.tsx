@@ -45,8 +45,12 @@ export function CategorySelector({
               relative py-2 px-3 text-sm text-left transition-all duration-200
               rounded-[15px] border-2
               ${selectedCategories.includes(category)
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                ? role === 'seeker' 
+                  ? 'border-red-500 bg-red-50 text-red-700'
+                  : 'border-blue-500 bg-blue-50 text-blue-700'
+                : role === 'seeker'
+                  ? 'border-gray-200 hover:border-red-300 hover:bg-red-50'
+                  : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
               }
             `}
           >

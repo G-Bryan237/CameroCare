@@ -21,21 +21,23 @@ export async function POST(
     const postId = params.id
     const { platform } = await request.json() // 'twitter', 'facebook', 'whatsapp', 'instagram', 'copy'
 
-    // First check if the post exists
-    const { data: post, error: postError } = await supabase
-      .from('posts')
-      .select('shares')
-      .eq('id', postId)
-      .single()
+    // Check if user has already shared this post
+    const { data: existingShare, error: shareCheckError } = await supabase
+      .from('user_shares')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .eq('post_id', postId)
+      .maybeSingle()
 
-    if (postError || !post) {
+    if (shareCheckError) {
+      console.error('Error checking existing share:', shareCheckError)
       return NextResponse.json(
-        { message: 'Post not found' },
-        { status: 404 }
+        { message: 'Error checking share status', error: shareCheckError.message },
+        { status: 500 }
       )
     }
 
-    // Record the share
+    // Record the share (allow multiple shares per user for different platforms)
     const { error: insertError } = await supabase
       .from('user_shares')
       .insert([{
@@ -53,33 +55,46 @@ export async function POST(
       )
     }
 
-    const newShareCount = (post.shares || 0) + 1
+    // Only increment share count if this is the user's first share of this post
+    let newShareCount = 0
+    if (!existingShare) {
+      const { data: updatedPost, error: updateError } = await supabase
+        .rpc('increment_shares', { post_id: postId })
 
-    // Update the post's share count
-    const { data: updatedPost, error: updateError } = await supabase
+      if (updateError) {
+        console.error('Error updating share count:', updateError)
+        return NextResponse.json(
+          { message: 'Failed to update share count', error: updateError.message },
+          { status: 500 }
+        )
+      }
+
+      newShareCount = updatedPost || 1
+    }
+
+    // Get the actual current share count from the database
+    const { data: currentPost, error: fetchError } = await supabase
       .from('posts')
-      .update({ shares: newShareCount })
-      .eq('id', postId)
       .select('shares')
-      .maybeSingle() // Use maybeSingle() instead of single()
+      .eq('id', postId)
+      .single()
 
-    if (updateError) {
-      console.error('Error updating share count:', updateError)
-      return NextResponse.json(
-        { message: 'Failed to update share count', error: updateError.message, details: updateError },
-        { status: 500 }
-      )
+    if (fetchError) {
+      console.error('Error fetching current post data:', fetchError)
+    } else {
+      newShareCount = currentPost.shares || 0
     }
 
     return NextResponse.json({
       success: true,
-      shares: newShareCount
+      shares: newShareCount,
+      isFirstShare: !existingShare
     })
 
   } catch (error) {
     console.error('Error handling share:', error)
     return NextResponse.json(
-      { message: 'Internal server error', error: error instanceof Error ? error.message : 'Unknown error', details: error },
+      { message: 'Internal server error', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

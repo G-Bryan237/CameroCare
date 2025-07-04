@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { Bell } from 'lucide-react'
-import { useUser } from '@/contexts/UserContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface Notification {
   id: string
@@ -25,7 +25,7 @@ const formatDateTime = (dateTime: string) => {
 }
 
 export default function Notifications() {
-  const { currentUser } = useUser()
+  const { user } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)

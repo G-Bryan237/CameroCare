@@ -48,19 +48,72 @@ ADD COLUMN IF NOT EXISTS bookmarks INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS shares INTEGER DEFAULT 0;
 ```
 
+### 4. Database Functions for Atomic Operations
+```sql
+-- Function to safely increment bookmark count
+CREATE OR REPLACE FUNCTION increment_bookmarks(p_post_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  new_count INTEGER;
+BEGIN
+  UPDATE posts 
+  SET bookmarks = COALESCE(bookmarks, 0) + 1 
+  WHERE id = p_post_id 
+  RETURNING bookmarks INTO new_count;
+  
+  RETURN COALESCE(new_count, 0);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to safely decrement bookmark count
+CREATE OR REPLACE FUNCTION decrement_bookmarks(p_post_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  new_count INTEGER;
+BEGIN
+  UPDATE posts 
+  SET bookmarks = GREATEST(COALESCE(bookmarks, 0) - 1, 0)
+  WHERE id = p_post_id 
+  RETURNING bookmarks INTO new_count;
+  
+  RETURN COALESCE(new_count, 0);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to safely increment share count
+CREATE OR REPLACE FUNCTION increment_shares(p_post_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  new_count INTEGER;
+BEGIN
+  UPDATE posts 
+  SET shares = COALESCE(shares, 0) + 1 
+  WHERE id = p_post_id 
+  RETURNING shares INTO new_count;
+  
+  RETURN COALESCE(new_count, 0);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute permissions to authenticated users
+GRANT EXECUTE ON FUNCTION increment_bookmarks(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION decrement_bookmarks(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION increment_shares(UUID) TO authenticated;
+```
+
 ## How to Apply These Changes
 
 1. Open your Supabase Dashboard
 2. Go to SQL Editor
 3. Run each SQL block above in order
-4. Verify the tables are created under Database > Tables
+4. Verify the tables and functions are created
 
 ## Features This Enables
 
-- ✅ **Persistent Bookmarks**: Users can save posts and see them across sessions
-- ✅ **Accurate Counters**: Real bookmark and share counts stored in database
-- ✅ **Share Tracking**: Track which platforms are used for sharing
+- ✅ **Reliable Bookmarks**: Atomic operations prevent race conditions
+- ✅ **Accurate Counters**: Database functions ensure consistent counts
+- ✅ **Share Tracking**: One share count increment per user per post
 - ✅ **User Privacy**: RLS ensures users only see their own bookmarks/shares
-- ✅ **Real Names**: Better author name extraction from user metadata
+- ✅ **Data Integrity**: Proper constraints and foreign keys
 
-After creating these tables, the save and share functionality will work correctly with persistent storage!
+After creating these tables and functions, the save and share functionality will work reliably with proper data consistency!

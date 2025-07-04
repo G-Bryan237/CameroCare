@@ -9,7 +9,7 @@ const formatDateTime = (timestamp: string) => {
   return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
 }
 import { Send, PaperclipIcon } from 'lucide-react'
-import { useUser } from '@/contexts/UserContext'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface Message {
   id: string
@@ -25,7 +25,7 @@ interface ChatProps {
 }
 
 export default function Chat({ recipientId, id }: ChatProps) {
-  const { currentUser } = useUser()
+  const { user } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -50,7 +50,7 @@ export default function Chat({ recipientId, id }: ChatProps) {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newMessage.trim()) return
+    if (!newMessage.trim() || !user) return
 
     setIsLoading(true)
     try {
@@ -87,12 +87,12 @@ export default function Chat({ recipientId, id }: ChatProps) {
           <div
             key={message.id}
             className={`flex ${
-              message.senderId === currentUser.login ? 'justify-end' : 'justify-start'
+              message.senderId === user?.id ? 'justify-end' : 'justify-start'
             }`}
           >
             <div
               className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                message.senderId === currentUser.login
+                message.senderId === user?.id
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100'
               }`}
