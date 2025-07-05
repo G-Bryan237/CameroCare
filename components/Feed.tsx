@@ -3,13 +3,14 @@
 
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { useSession } from 'next-auth/react'
-import PostCard from '@/components/post/PostCard'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import EnhancedPostCard from '@/components/post/EnhancedPostCard'
 import { ASSISTANCE_CATEGORIES } from '@/types'
 import formatDateTime from '@/lib/utils/formatDateTime';
 
 interface Post {
   _id: string
+  id: string // Add missing id property
   title: string
   description: string
   post: {
@@ -32,6 +33,10 @@ interface Post {
     image?: string
   }
   createdAt: string
+  created_at: string // Add missing created_at property
+  interaction_count: number // Add missing interaction_count property
+  bookmarks: number | string[] // Can be a number (count) or an array of user IDs
+  shares: number // Add missing shares property
   volunteers: Array<{
     user: {
       _id: string
@@ -43,11 +48,28 @@ interface Post {
 }
 
 export default function Feed() {
-  const { data: session } = useSession()
+  const supabase = createClientComponentClient()
+  const [session, setSession] = useState<any>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [activeTab, setActiveTab] = useState<'HELP_REQUEST' | 'HELP_OFFER'>('HELP_REQUEST')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [supabase.auth])
 
   useEffect(() => {
     fetchPosts()
@@ -97,7 +119,7 @@ export default function Feed() {
         </div>
 
         <div className="text-sm text-gray-500">
-          {session?.user?.name ? `Logged in as ${session.user.name}` : ''}
+          {session?.user?.email ? `Logged in as ${session.user.email}` : ''}
           {format(new Date(), 'PPpp')}
           {formatDateTime(new Date())}
         </div>
@@ -113,11 +135,30 @@ export default function Feed() {
           ) : (
             <div className="space-y-6">
               {posts.map((post) => (
-                <PostCard 
+                <EnhancedPostCard
                   key={post._id} 
-                  post={post}
-                  currentUser={session?.user as { id: string; name: string; image?: string }}
-                  onVolunteer={() => fetchPosts()}
+                  post={{
+                    ...post,
+                    id: post._id,
+                    created_at: post.createdAt,
+                    interaction_count: post.interaction_count || 0,
+                    bookmarks: typeof post.bookmarks === 'number' ? post.bookmarks : (Array.isArray(post.bookmarks) ? post.bookmarks.length : 0),
+                    shares: post.shares || 0,
+                    author: {
+                      id: post.author._id,
+                      name: post.author.name,
+                      avatar_url: post.author.image,
+                    }
+                  }}
+                  currentUser={session?.user ? {
+                    id: session.user.id,
+                    email: session.user.email,
+                    app_metadata: session.user.app_metadata || {},
+                    user_metadata: session.user.user_metadata || {},
+                    aud: session.user.aud || '',
+                    created_at: session.user.created_at || new Date().toISOString()
+                  } : null}
+                  onInteraction={() => fetchPosts()}
                 />
               ))}
             </div>

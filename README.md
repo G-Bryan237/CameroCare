@@ -5,6 +5,77 @@ It's design in such a way where both those who help and request help choose the 
 
 Those who request help would be limited to 3 categories but Helpers can't provide as many categories at their will.
 
+## New Features
+
+### 🤝 Enhanced "Offer Help" Experience
+- **Step-by-step Modal Flow**: Guided 4-step process for offering help
+- **Profile Showcase**: Helpers can display their skills, badges, and ratings
+- **Trust Building**: Verification badges and rating system
+- **Smart Messaging**: Pre-filled personalized messages with customization
+- **Status Tracking**: Real-time tracking of offer status (Pending, Accepted, Declined)
+- **Mobile-First Design**: Optimized for all screen sizes
+
+### 📱 User Experience Improvements
+- **Micro-interactions**: Smooth animations and hover effects
+- **Trust Indicators**: Helper badges, ratings, and completion counts
+- **Real-time Updates**: Live participant counts and status updates
+- **Accessibility**: Screen reader friendly and keyboard navigation
+
+## New API Endpoints
+
+### Help Offers
+- `POST /api/posts/[id]/offer-help` - Submit a help offer
+- `GET /api/posts/[id]/offer-help` - Get help offers for a post (post author only)
+
+### Database Schema Updates
+```sql
+-- Help Offers Table
+CREATE TABLE help_offers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+  helper_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  requester_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  availability TEXT NOT NULL,
+  contact_method TEXT NOT NULL,
+  skills_offered TEXT[] DEFAULT '{}',
+  helper_profile JSONB NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Notifications Table
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  data JSONB DEFAULT '{}',
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- User Bookmarks Table
+CREATE TABLE user_bookmarks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, post_id)
+);
+
+-- User Shares Table
+CREATE TABLE user_shares (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
 ## Getting Started
 Installing packages :
 ```bash
@@ -85,4 +156,24 @@ Feel free to reach out with feedback or inquiries:
 ---
 
 Thank you for visiting my website!
+
+## UI/UX Design Principles
+
+### Trust & Safety
+- **Verification Badges**: Quick responder, verified helper, top rated
+- **Rating System**: 5-star rating with completion count
+- **Profile Transparency**: Skills, bio, and help history
+- **Secure Communication**: All messages through platform initially
+
+### Engagement Features
+- **Gamification**: Badges for helping, response time, completions
+- **Social Proof**: Helper count, ratings, and testimonials
+- **Progress Tracking**: Visual progress through help offer steps
+- **Instant Feedback**: Real-time status updates and notifications
+
+### Mobile-First Approach
+- **Touch-Friendly**: Large buttons and easy navigation
+- **Responsive Design**: Works perfectly on all screen sizes
+- **Fast Loading**: Optimized for mobile data connections
+- **Offline Support**: Cache important data for offline viewing
 

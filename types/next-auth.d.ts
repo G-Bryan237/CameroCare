@@ -1,47 +1,26 @@
-// types/next-auth.d.ts
-import NextAuth from "next-auth"
+// types/supabase-auth.d.ts
 
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string
-      email: string
-      name?: string
-      image?: string
-      user_metadata?: {
-        first_name?: string
-        last_name?: string
-      }
-    }
-  }
-
-  interface User {
-    id: string
-    email: string
-    name?: string
-    image?: string
-    user_metadata?: {
-      first_name?: string
-      last_name?: string
-    }
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    sub: string
-    email?: string
-  }
-}
-
-// Add Supabase-specific types
+// Supabase User types
 export interface SupabaseUser {
   id: string
   email: string
   user_metadata?: {
     first_name?: string
     last_name?: string
+    full_name?: string
+    avatar_url?: string
   }
+  app_metadata?: Record<string, any>
+  aud: string
+  created_at: string
+}
+
+export interface SupabaseSession {
+  access_token: string
+  refresh_token: string
+  expires_in: number
+  token_type: string
+  user: SupabaseUser
 }
 
 export interface UserProfile {
@@ -56,7 +35,7 @@ export interface UserProfile {
 export interface AuthContextType {
   user: SupabaseUser | null
   profile: UserProfile | null
-  session: any | null
+  session: SupabaseSession | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error?: string }>
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error?: string }>
