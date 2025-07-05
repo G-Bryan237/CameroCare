@@ -36,7 +36,7 @@ export async function POST(
       return NextResponse.json({ message: 'You cannot request help from your own post' }, { status: 400 })
     }
 
-    // Check for existing request
+    // Check for existing request OR conversation
     const { data: existingRequest } = await supabase
       .from('help_requests')
       .select('id')
@@ -44,8 +44,32 @@ export async function POST(
       .eq('requester_id', session.user.id)
       .single()
 
-    if (existingRequest) {
-      return NextResponse.json({ message: 'You have already requested help for this post' }, { status: 409 })
+    // Check for existing conversation
+    const { data: existingConversation } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('post_id', postId)
+      .eq('requester_id', session.user.id)
+      .eq('helper_id', post.author_id)
+      .single()
+
+    if (existingRequest || existingConversation) {
+      // Return the existing conversation ID instead of error
+      const conversationId = existingConversation?.id || 
+        (await supabase
+          .from('conversations')
+          .select('id')
+          .eq('post_id', postId)
+          .eq('requester_id', session.user.id)
+          .eq('helper_id', post.author_id)
+          .single()
+        ).data?.id
+
+      return NextResponse.json({
+        message: 'Conversation already exists',
+        conversationId,
+        isExisting: true
+      })
     }
 
     // Create help request

@@ -245,7 +245,7 @@ export default function FeedPage() {
                   <BellIcon className="h-5 w-5" />
                 </button>
                 <Link 
-                  href="/chat" 
+                  href="/conversations" 
                   className="text-gray-600 hover:text-gray-900"
                   title="Messages"
                 >

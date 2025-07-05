@@ -525,12 +525,13 @@ function PostCard({ post, currentUser }: PostCardProps) {
       body: JSON.stringify({ message }),
     })
 
+    const result = await response.json()
+
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Failed to send help request')
+      throw new Error(result.message || 'Failed to send help request')
     }
 
-    return await response.json()
+    return result
   }
 
   const handleActionButton = () => {
@@ -698,7 +699,9 @@ function PostCard({ post, currentUser }: PostCardProps) {
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <MapPin className="h-4 w-4" />
-                  <span>{post.location}{post.region ? `, ${post.region}` : ''}</span>
+                  <span>
+                    {[post.location, post.region].filter(Boolean).join(', ') || 'Location not specified'}
+                  </span>
                   <Clock className="h-4 w-4" />
                   <span>{formatDateTime(post.created_at)}</span>
                 </div>
