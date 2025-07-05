@@ -77,7 +77,7 @@ export default function ConversationsListPage() {
       // Fetch conversations where user is either helper or requester
       const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
-        .select(`
+        .select(\`
           *,
           post:posts(
             id,
@@ -87,8 +87,8 @@ export default function ConversationsListPage() {
             location,
             region
           )
-        `)
-        .or(`helper_id.eq.${currentUser.id},requester_id.eq.${currentUser.id}`)
+        \`)
+        .or(\`helper_id.eq.\${currentUser.id},requester_id.eq.\${currentUser.id}\`)
         .order('updated_at', { ascending: false })
 
       if (conversationsError) {
@@ -127,7 +127,6 @@ export default function ConversationsListPage() {
     if (currentUser) {
       fetchConversations()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser])
 
   // Enhanced function to get REAL user profile info  
@@ -206,9 +205,9 @@ export default function ConversationsListPage() {
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
     
     if (diffInMinutes < 1) return 'Just now'
-    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hour${diffInMinutes / 60 !== 1 ? 's' : ''} ago`
-    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} day${Math.floor(diffInMinutes / 1440) !== 1 ? 's' : ''} ago`
+    if (diffInMinutes < 60) return \`\${diffInMinutes} minute\${diffInMinutes !== 1 ? 's' : ''} ago\`
+    if (diffInMinutes < 1440) return \`\${Math.floor(diffInMinutes / 60)} hour\${diffInMinutes / 60 !== 1 ? 's' : ''} ago\`
+    if (diffInMinutes < 10080) return \`\${Math.floor(diffInMinutes / 1440)} day\${Math.floor(diffInMinutes / 1440) !== 1 ? 's' : ''} ago\`
     return date.toLocaleDateString()
   }
 
@@ -285,7 +284,7 @@ export default function ConversationsListPage() {
               return (
                 <Link
                   key={conversation.id}
-                  href={`/conversations/${conversation.id}`}
+                  href={\`/conversations/\${conversation.id}\`}
                   className="block bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow"
                 >
                   <div className="p-4">

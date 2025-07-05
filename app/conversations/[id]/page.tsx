@@ -64,6 +64,19 @@ interface Conversation {
 export default function ConversationPage() {
   const params = useParams()
   const router = useRouter()
+  
+  // Better parameter validation
+  const conversationId = Array.isArray(params.id) ? params.id[0] : params.id
+  
+  // Add validation to ensure we have a valid UUID
+  useEffect(() => {
+    if (!conversationId || conversationId === 'undefined') {
+      console.error('Invalid conversation ID:', conversationId)
+      router.push('/conversations')
+      return
+    }
+  }, [conversationId, router])
+
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
@@ -78,8 +91,6 @@ export default function ConversationPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const messageInputRef = useRef<HTMLInputElement>(null)
-
-  const conversationId = params.id as string
 
   // Get current user
   useEffect(() => {
