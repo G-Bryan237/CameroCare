@@ -1,5 +1,4 @@
 // src/components/ui/alert.tsx
-import { AlertCircle } from 'lucide-react'
 
 interface AlertProps {
   variant?: 'default' | 'destructive'

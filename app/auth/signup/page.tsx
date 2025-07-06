@@ -39,7 +39,7 @@ export default function SignUp() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -58,7 +58,7 @@ export default function SignUp() {
         alert('Check your email for verification link!')
         router.push('/auth/signin')
       }
-    } catch (error: any) {
+    } catch {
       setError('An error occurred during registration')
     } finally {
       setIsLoading(false)

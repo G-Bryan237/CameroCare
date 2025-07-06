@@ -25,7 +25,6 @@ const formatDateTime = (dateTime: string) => {
 }
 
 export default function Notifications() {
-  const { user } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)

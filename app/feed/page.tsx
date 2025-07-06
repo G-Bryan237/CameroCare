@@ -29,11 +29,11 @@ import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 
 interface UserStats {
-  helpsGiven: number
-  helpsReceived: number 
-  averageRating: number
-  totalPosts: number
-  displayName: string
+  helpsGiven: number        // Number of times user helped others (as helper in conversations with messages)
+  helpsReceived: number     // Number of times user received help (as requester in conversations with messages)
+  averageRating: number     // Average rating from help_interactions table
+  totalPosts: number        // Total unique posts user has participated in (authored or engaged with)
+  displayName: string       // User's display name from profiles or auth metadata
 }
 
 export default function FeedPage() {
@@ -73,32 +73,74 @@ export default function FeedPage() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Fetch user statistics from database
+  // Fetch user statistics from database with enhanced accuracy
   const fetchUserStats = async (user: User) => {
     try {
-      // Get user's display name
-      const displayName = user.user_metadata?.full_name || 
-                         user.user_metadata?.name || 
-                         user.email?.split('@')[0] || 
-                         'User'
+      // Get user's display name from profiles or fallback to auth metadata
+      let displayName = 'User'
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('name, full_name, first_name, last_name')
+          .eq('id', user.id)
+          .single()
 
-      // Count helps given (conversations where user is helper)
+        if (profileData) {
+          displayName = profileData.name || 
+                       profileData.full_name || 
+                       (profileData.first_name && profileData.last_name ? 
+                         `${profileData.first_name} ${profileData.last_name}` : null) ||
+                       user.user_metadata?.full_name || 
+                       user.user_metadata?.name || 
+                       user.email?.split('@')[0] || 
+                       'User'
+        } else {
+          displayName = user.user_metadata?.full_name || 
+                       user.user_metadata?.name || 
+                       user.email?.split('@')[0] || 
+                       'User'
+        }
+      } catch {
+        displayName = user.user_metadata?.full_name || 
+                     user.user_metadata?.name || 
+                     user.email?.split('@')[0] || 
+                     'User'
+      }
+
+      // Count actual helps given (conversations where user is helper AND there are messages)
       const { data: helpsGivenData } = await supabase
         .from('conversations')
-        .select('id')
+        .select(`
+          id,
+          messages!inner(id)
+        `)
         .eq('helper_id', user.id)
 
-      // Count helps received (conversations where user is requester)  
+      // Count actual helps received (conversations where user is requester AND there are messages)
       const { data: helpsReceivedData } = await supabase
         .from('conversations')
-        .select('id')
+        .select(`
+          id,
+          messages!inner(id)
+        `)
         .eq('requester_id', user.id)
 
-      // Count total posts by user
-      const { data: postsData } = await supabase
+      // Count posts user has participated in (either as author or in conversations)
+      const { data: authoredPosts } = await supabase
         .from('posts')
         .select('id')
         .eq('author_id', user.id)
+
+      const { data: participatedConversations } = await supabase
+        .from('conversations')
+        .select('post_id')
+        .or(`helper_id.eq.${user.id},requester_id.eq.${user.id}`)
+        .not('post_id', 'is', null)
+
+      // Get unique posts the user has participated in
+      const authoredPostIds = new Set(authoredPosts?.map(p => p.id) || [])
+      const participatedPostIds = new Set(participatedConversations?.map(c => c.post_id) || [])
+      const allUniquePostIds = new Set([...authoredPostIds, ...participatedPostIds])
 
       // Get average rating from help_interactions if the table exists
       let averageRating = 4.8 // Default rating
@@ -113,7 +155,7 @@ export default function FeedPage() {
           const ratings = ratingData.map(r => r.rating)
           averageRating = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
         }
-      } catch (error) {
+      } catch {
         // help_interactions table might not exist, use default
         console.log('help_interactions table not found, using default rating')
       }
@@ -122,7 +164,7 @@ export default function FeedPage() {
         helpsGiven: helpsGivenData?.length || 0,
         helpsReceived: helpsReceivedData?.length || 0,
         averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
-        totalPosts: postsData?.length || 0,
+        totalPosts: allUniquePostIds.size, // Total unique posts participated in
         displayName
       }
 
@@ -307,7 +349,7 @@ export default function FeedPage() {
                     <div className="text-lg font-semibold text-orange-600">
                       {loading ? '...' : userStats?.totalPosts || 0}
                     </div>
-                    <div className="text-xs text-gray-600">Posts Created</div>
+                    <div className="text-xs text-gray-600">Posts Participated</div>
                   </div>
                 </div>
               </div>

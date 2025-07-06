@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
@@ -14,7 +19,7 @@ export async function POST(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const postId = params.id
+    const postId = id
     const { message } = await request.json()
 
     if (!message?.trim()) {

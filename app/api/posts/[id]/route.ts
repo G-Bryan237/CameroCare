@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     // Create Supabase client with cookies for server-side auth
     const supabase = createRouteHandlerClient({ cookies })
     
@@ -23,7 +28,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('posts')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('author_id', session.user.id) // Ensure user can only delete their own posts
 
     if (error) {
@@ -46,9 +51,10 @@ export async function DELETE(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     // Create Supabase client with cookies for server-side auth
     const supabase = createRouteHandlerClient({ cookies })
     
@@ -71,7 +77,7 @@ export async function PUT(
         ...body,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('author_id', session.user.id)
       .select()
       .single()

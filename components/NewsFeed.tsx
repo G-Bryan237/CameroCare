@@ -25,8 +25,8 @@ const INITIAL_POSTS = [
   }
 ]
 
-export default function NewsFeed({ role }: NewsFeedProps) {
-  const [posts, setPosts] = useState(INITIAL_POSTS)
+export default function NewsFeed() {
+  const [posts] = useState(INITIAL_POSTS)
 
   return (
     <div className="max-w-2xl mx-auto p-4">

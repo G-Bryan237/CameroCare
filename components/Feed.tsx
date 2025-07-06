@@ -2,8 +2,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { Session } from '@supabase/auth-helpers-nextjs'
 import EnhancedPostCard from '@/components/post/EnhancedPostCard'
 import { ASSISTANCE_CATEGORIES } from '@/types'
 import formatDateTime from '@/lib/utils/formatDateTime';
@@ -40,7 +40,7 @@ interface Post {
 
 export default function Feed() {
   const supabase = createClientComponentClient()
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [activeTab, setActiveTab] = useState<'HELP_REQUEST' | 'HELP_OFFER'>('HELP_REQUEST')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)

@@ -2,11 +2,16 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     // Get current user
@@ -17,7 +22,7 @@ export async function GET(
       })
     }
 
-    const postId = params.id
+    const postId = id
 
     // Check if user has bookmarked this post
     const { data: existingBookmark, error: bookmarkError } = await supabase
@@ -48,9 +53,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     // Get current user
@@ -62,7 +68,7 @@ export async function POST(
       )
     }
 
-    const postId = params.id
+    const postId = id
 
     // Check if user has already bookmarked this post
     const { data: existingBookmark, error: bookmarkError } = await supabase

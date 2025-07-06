@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     const { data: { session } } = await supabase.auth.getSession()
@@ -14,7 +19,7 @@ export async function POST(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const postId = params.id
+    const postId = id
     const { message, availability, contactMethod, skillsOffered } = await request.json()
 
     if (!message?.trim()) {
@@ -122,8 +127,31 @@ export async function POST(
           message_text: message.trim()
         })
 
-      // Manually update participant count since we didn't use the API
-      await updatePostParticipantCount(supabase, postId, post.author_id)
+      // Update participant count
+      const { data: conversationData } = await supabase
+        .from('conversations')
+        .select('helper_id, requester_id')
+        .eq('post_id', postId)
+
+      let participantCount = 0
+      if (conversationData) {
+        const uniqueParticipants = new Set()
+        conversationData.forEach((conv: Record<string, unknown>) => {
+          // Add both helper and requester, but exclude the post author
+          if (conv.helper_id !== post.author_id) uniqueParticipants.add(conv.helper_id)
+          if (conv.requester_id !== post.author_id) uniqueParticipants.add(conv.requester_id)
+        })
+        participantCount = uniqueParticipants.size
+      }
+
+      // Update the post with new participant count
+      await supabase
+        .from('posts')
+        .update({ 
+          participant_count: participantCount,
+          last_activity_at: new Date().toISOString()
+        })
+        .eq('id', postId)
     }
 
     return NextResponse.json({
@@ -139,7 +167,7 @@ export async function POST(
 }
 
 // Helper function to update participant count
-async function updatePostParticipantCount(supabase: any, postId: string, authorId: string) {
+async function updatePostParticipantCount(supabase: ReturnType<typeof createRouteHandlerClient>, postId: string, authorId: string) {
   try {
     // Count unique participants (excluding the post author)
     const { data: conversationData } = await supabase
@@ -150,7 +178,7 @@ async function updatePostParticipantCount(supabase: any, postId: string, authorI
     let participantCount = 0
     if (conversationData) {
       const uniqueParticipants = new Set()
-      conversationData.forEach((conv: any) => {
+      conversationData.forEach((conv: Record<string, unknown>) => {
         // Add both helper and requester, but exclude the post author
         if (conv.helper_id !== authorId) uniqueParticipants.add(conv.helper_id)
         if (conv.requester_id !== authorId) uniqueParticipants.add(conv.requester_id)
@@ -174,9 +202,10 @@ async function updatePostParticipantCount(supabase: any, postId: string, authorI
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     // Get current user
@@ -188,7 +217,7 @@ export async function GET(
       )
     }
 
-    const postId = params.id
+    const postId = id
 
     // Check if user is the post author
     const { data: post } = await supabase

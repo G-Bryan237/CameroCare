@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     // Get current user session
@@ -20,7 +25,7 @@ export async function GET(
     }
 
     // Only allow users to fetch their own profile
-    if (session.user.id !== params.id) {
+    if (session.user.id !== id) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 403 }
@@ -100,9 +105,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     // Get current user session
@@ -116,7 +122,7 @@ export async function PUT(
     }
 
     // Only allow users to update their own profile
-    if (session.user.id !== params.id) {
+    if (session.user.id !== id) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 403 }

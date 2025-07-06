@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     
@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to update participant count
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function updatePostParticipantCount(supabase: any, postId: string) {
   try {
     // Get the post to know the author
@@ -126,7 +127,7 @@ async function updatePostParticipantCount(supabase: any, postId: string) {
     let participantCount = 0
     if (conversationData) {
       const uniqueParticipants = new Set()
-      conversationData.forEach((conv: any) => {
+      conversationData.forEach((conv: Record<string, unknown>) => {
         // Add both helper and requester, but exclude the post author
         if (conv.helper_id !== post.author_id) uniqueParticipants.add(conv.helper_id)
         if (conv.requester_id !== post.author_id) uniqueParticipants.add(conv.requester_id)

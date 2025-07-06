@@ -2,11 +2,16 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = createRouteHandlerClient({ cookies })
     
     // Get current user
@@ -18,7 +23,7 @@ export async function POST(
       )
     }
 
-    const postId = params.id
+    const postId = id
     const { platform } = await request.json() // 'twitter', 'facebook', 'whatsapp', 'instagram', 'copy'
 
     // Check if user has already shared this post

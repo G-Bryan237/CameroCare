@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
         if (profileData) {
           authorName = profileData.name || 'Community Member'
         }
-      } catch (error) {
+      } catch {
         console.log('Could not fetch author profile, using fallback')
       }
 

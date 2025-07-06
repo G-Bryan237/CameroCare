@@ -1,6 +1,4 @@
 // components/CategorySelector.tsx
-import { useState } from 'react'
-
 
 interface CategorySelectorProps {
 

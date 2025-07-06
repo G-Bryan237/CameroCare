@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
 import Logo from '@/components/logo'
 
-export default function SignIn() {
+function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
@@ -24,7 +24,7 @@ export default function SignIn() {
     setError('')
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       })
@@ -37,7 +37,7 @@ export default function SignIn() {
         router.push(callbackUrl)
         router.refresh()
       }
-    } catch (error: any) {
+    } catch {
       setError('An error occurred. Please try again.')
     } finally {
       setIsLoading(false)
@@ -104,7 +104,7 @@ export default function SignIn() {
         
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/auth/signup" className="text-blue-600 hover:text-blue-700 font-medium">
               Sign up
             </Link>
@@ -112,5 +112,15 @@ export default function SignIn() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignIn() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+    </div>}>
+      <SignInForm />
+    </Suspense>
   )
 }

@@ -61,13 +61,13 @@ interface Conversation {
     id: string
     name: string
     avatar_url?: string
-    user_metadata?: any
+    user_metadata?: Record<string, unknown>
   }
   requester?: {
     id: string
     name: string
     avatar_url?: string
-    user_metadata?: any
+    user_metadata?: Record<string, unknown>
   }
 }
 

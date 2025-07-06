@@ -1,10 +1,8 @@
 // app/page.tsx
 'use client';
 
-import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import type { User } from '@supabase/supabase-js';
+import { useEffect } from 'react';
 import { HeartIcon as HandHeart, UserGroupIcon as Users, NewspaperIcon } from '@heroicons/react/20/solid';
 import Link from 'next/link';
 import Logo from '@/components/logo';

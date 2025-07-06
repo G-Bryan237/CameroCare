@@ -11,6 +11,18 @@ import Link from 'next/link'
 
 const supabase = createClientComponentClient()
 
+interface User {
+  id: string
+  email?: string
+  user_metadata?: {
+    full_name?: string
+    name?: string
+    first_name?: string
+    last_name?: string
+    avatar_url?: string
+  }
+}
+
 interface Conversation {
   id: string
   helper_id: string
@@ -42,7 +54,7 @@ interface Conversation {
 export default function ConversationsListPage() {
   const router = useRouter()
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
@@ -71,6 +83,8 @@ export default function ConversationsListPage() {
   }, [router])
 
   const fetchConversations = async () => {
+    if (!currentUser) return
+    
     try {
       setLoading(true)
       setError(null)
@@ -153,9 +167,9 @@ export default function ConversationsListPage() {
           if (state[userId].length > 0) {
             onlineUserIds.add(userId)
             // Get the latest presence data
-            const latestPresence = state[userId][state[userId].length - 1] as any
+            const latestPresence = state[userId][state[userId].length - 1] as Record<string, unknown>
             if (latestPresence?.online_at) {
-              lastSeenMap.set(userId, latestPresence.online_at)
+              lastSeenMap.set(userId, latestPresence.online_at as string)
             }
           }
         })
@@ -169,9 +183,9 @@ export default function ConversationsListPage() {
         
         // Update last seen
         if (newPresences && newPresences.length > 0) {
-          const latestPresence = newPresences[newPresences.length - 1] as any
+          const latestPresence = newPresences[newPresences.length - 1] as Record<string, unknown>
           if (latestPresence?.online_at) {
-            setUserLastSeen(prev => new Map(prev).set(key, latestPresence.online_at))
+            setUserLastSeen(prev => new Map(prev).set(key, latestPresence.online_at as string))
           }
         }
       })
@@ -189,9 +203,9 @@ export default function ConversationsListPage() {
         
         // Also try to get time from presence data if available
         if (leftPresences && leftPresences.length > 0) {
-          const latestPresence = leftPresences[leftPresences.length - 1] as any
+          const latestPresence = leftPresences[leftPresences.length - 1] as Record<string, unknown>
           if (latestPresence?.online_at) {
-            setUserLastSeen(prev => new Map(prev).set(key, latestPresence.online_at))
+            setUserLastSeen(prev => new Map(prev).set(key, latestPresence.online_at as string))
           }
         }
       })
@@ -293,17 +307,6 @@ export default function ConversationsListPage() {
       : conversation.helper
   }
 
-  const formatMessageTime = (timestamp: string) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-    
-    if (diffInMinutes < 1) return 'Just now'
-    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hour${Math.floor(diffInMinutes / 60) !== 1 ? 's' : ''} ago`
-    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} day${Math.floor(diffInMinutes / 1440) !== 1 ? 's' : ''} ago`
-    return date.toLocaleDateString()
-  }
 
   const formatLastSeen = (timestamp: string) => {
     const date = new Date(timestamp)
