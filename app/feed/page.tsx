@@ -28,6 +28,14 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 
+interface UserStats {
+  helpsGiven: number
+  helpsReceived: number 
+  averageRating: number
+  totalPosts: number
+  displayName: string
+}
+
 export default function FeedPage() {
   const [activeTab, setActiveTab] = useState<'help' | 'offer'>('help')
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
@@ -35,6 +43,8 @@ export default function FeedPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [user, setUser] = useState<User | null>(null)
+  const [userStats, setUserStats] = useState<UserStats | null>(null)
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
@@ -42,6 +52,12 @@ export default function FeedPage() {
     const getCurrentUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user ?? null)
+      
+      // Fetch user stats if user exists
+      if (session?.user) {
+        await fetchUserStats(session.user)
+      }
+      setLoading(false)
     }
     
     getCurrentUser()
@@ -49,10 +65,80 @@ export default function FeedPage() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        fetchUserStats(session.user)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Fetch user statistics from database
+  const fetchUserStats = async (user: User) => {
+    try {
+      // Get user's display name
+      const displayName = user.user_metadata?.full_name || 
+                         user.user_metadata?.name || 
+                         user.email?.split('@')[0] || 
+                         'User'
+
+      // Count helps given (conversations where user is helper)
+      const { data: helpsGivenData } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('helper_id', user.id)
+
+      // Count helps received (conversations where user is requester)  
+      const { data: helpsReceivedData } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('requester_id', user.id)
+
+      // Count total posts by user
+      const { data: postsData } = await supabase
+        .from('posts')
+        .select('id')
+        .eq('author_id', user.id)
+
+      // Get average rating from help_interactions if the table exists
+      let averageRating = 4.8 // Default rating
+      try {
+        const { data: ratingData } = await supabase
+          .from('help_interactions')
+          .select('rating')
+          .eq('helper_id', user.id)
+          .not('rating', 'is', null)
+
+        if (ratingData && ratingData.length > 0) {
+          const ratings = ratingData.map(r => r.rating)
+          averageRating = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+        }
+      } catch (error) {
+        // help_interactions table might not exist, use default
+        console.log('help_interactions table not found, using default rating')
+      }
+
+      const stats: UserStats = {
+        helpsGiven: helpsGivenData?.length || 0,
+        helpsReceived: helpsReceivedData?.length || 0,
+        averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
+        totalPosts: postsData?.length || 0,
+        displayName
+      }
+
+      setUserStats(stats)
+    } catch (error) {
+      console.error('Error fetching user stats:', error)
+      // Set default stats on error
+      setUserStats({
+        helpsGiven: 0,
+        helpsReceived: 0,
+        averageRating: 4.8,
+        totalPosts: 0,
+        displayName: user.user_metadata?.name || user.email?.split('@')[0] || 'User'
+      })
+    }
+  }
   
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category)
@@ -65,6 +151,10 @@ export default function FeedPage() {
   const handlePostSuccess = () => {
     setShowCreateForm(false)
     setRefreshKey(prev => prev + 1)
+    // Refresh user stats since they created a new post
+    if (user) {
+      fetchUserStats(user)
+    }
   }
 
   const handleSignOut = async () => {
@@ -82,14 +172,26 @@ export default function FeedPage() {
 
   // Get user display name
   const getUserDisplayName = () => {
-    if (!user) return 'Guest User'
-    return user.user_metadata?.name || user.email?.split('@')[0] || 'User'
+    return userStats?.displayName || 'Guest User'
   }
 
   // Get user initials for avatar
   const getUserInitials = () => {
     const name = getUserDisplayName()
     return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+
+  // Get user role based on statistics
+  const getUserRole = () => {
+    if (!userStats) return 'Community Member'
+    
+    const totalHelps = userStats.helpsGiven + userStats.helpsReceived
+    
+    if (totalHelps >= 50) return 'Community Champion'
+    if (totalHelps >= 20) return 'Active Helper'
+    if (totalHelps >= 10) return 'Community Helper'
+    if (totalHelps >= 5) return 'Helper'
+    return 'Community Member'
   }
 
   return (
@@ -178,18 +280,34 @@ export default function FeedPage() {
                   </div>
                   <div>
                     <div className="font-medium text-gray-900">{getUserDisplayName()}</div>
-                    <div className="text-sm text-gray-600">Community Helper</div>
+                    <div className="text-sm text-gray-600">{getUserRole()}</div>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 text-center">
                   <div className="bg-white rounded-lg p-3">
-                    <div className="text-lg font-semibold text-blue-600">12</div>
+                    <div className="text-lg font-semibold text-blue-600">
+                      {loading ? '...' : userStats?.helpsGiven || 0}
+                    </div>
                     <div className="text-xs text-gray-600">Helps Given</div>
                   </div>
                   <div className="bg-white rounded-lg p-3">
-                    <div className="text-lg font-semibold text-green-600">4.8</div>
+                    <div className="text-lg font-semibold text-green-600">
+                      {loading ? '...' : userStats?.averageRating || '4.8'}
+                    </div>
                     <div className="text-xs text-gray-600">Rating</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3">
+                    <div className="text-lg font-semibold text-purple-600">
+                      {loading ? '...' : userStats?.helpsReceived || 0}
+                    </div>
+                    <div className="text-xs text-gray-600">Helps Received</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-3">
+                    <div className="text-lg font-semibold text-orange-600">
+                      {loading ? '...' : userStats?.totalPosts || 0}
+                    </div>
+                    <div className="text-xs text-gray-600">Posts Created</div>
                   </div>
                 </div>
               </div>

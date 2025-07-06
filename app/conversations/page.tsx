@@ -239,17 +239,17 @@ export default function ConversationsListPage() {
         }
       }
       
-      // Try to get profile from user_profiles table (only columns that exist)
+      // Try to get profile from profiles table (only columns that exist)
       const { data: profileData } = await supabase
-        .from('user_profiles')
-        .select('user_id, display_name, avatar_url')
-        .eq('user_id', userId)
+        .from('profiles')
+        .select('id, name, avatar_url')
+        .eq('id', userId)
         .single()
 
       if (profileData) {
         return {
-          id: profileData.user_id,
-          name: profileData.display_name || 'Community Member',
+          id: profileData.id,
+          name: profileData.name || 'Community Member',
           avatar_url: profileData.avatar_url
         }
       }
