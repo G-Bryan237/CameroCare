@@ -15,18 +15,6 @@ import Link from 'next/link'
 
 const supabase = createClientComponentClient()
 
-interface User {
-  id: string
-  email?: string
-  user_metadata?: {
-    full_name?: string
-    name?: string
-    first_name?: string
-    last_name?: string
-    avatar_url?: string
-  }
-}
-
 interface Message {
   id: string
   conversation_id: string
@@ -61,13 +49,11 @@ interface Conversation {
     id: string
     name: string
     avatar_url?: string
-    user_metadata?: any
   }
   requester?: {
     id: string
     name: string
     avatar_url?: string
-    user_metadata?: any
   }
 }
 
@@ -75,10 +61,8 @@ export default function ConversationPage() {
   const params = useParams()
   const router = useRouter()
   
-  // Better parameter validation
   const conversationId = Array.isArray(params.id) ? params.id[0] : params.id
   
-  // Add validation to ensure we have a valid UUID
   useEffect(() => {
     if (!conversationId || conversationId === 'undefined') {
       console.error('Invalid conversation ID:', conversationId)
@@ -90,7 +74,7 @@ export default function ConversationPage() {
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [otherUserOnline, setOtherUserOnline] = useState(false)
@@ -127,23 +111,19 @@ export default function ConversationPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
 
-  // Helper function to get user profile info
   const getUserProfile = useCallback(async (userId: string) => {
     try {
-      // If it's the current user, we have their data
       if (userId === currentUser?.id) {
         return {
           id: currentUser.id,
           name: currentUser.user_metadata?.full_name || 
                 currentUser.user_metadata?.name || 
-                currentUser.user_metadata?.first_name + ' ' + currentUser.user_metadata?.last_name ||
                 currentUser.email?.split('@')[0] || 
                 'You',
           avatar_url: currentUser.user_metadata?.avatar_url || null
         }
       }
       
-      // Try to get profile from profiles table (only use existing columns)
       const { data: profileData } = await supabase
         .from('profiles')
         .select('id, name, avatar_url')
@@ -158,7 +138,6 @@ export default function ConversationPage() {
         }
       }
       
-      // Fallback for users not in profiles table
       return {
         id: userId,
         name: 'User',
@@ -201,13 +180,10 @@ export default function ConversationPage() {
   }, [messages, currentUser])
 
   const fetchConversationData = useCallback(async () => {
-    if (!currentUser) return
-    
     try {
       setLoading(true)
       setError(null)
 
-      // Fetch conversation with post data only
       const { data: conversationData, error: conversationError } = await supabase
         .from('conversations')
         .select(`
@@ -229,20 +205,17 @@ export default function ConversationPage() {
         throw conversationError
       }
 
-      // Check if current user is part of this conversation
       if (conversationData.helper_id !== currentUser.id && conversationData.requester_id !== currentUser.id) {
         setError('You do not have access to this conversation')
         router.push('/conversations')
         return
       }
 
-      // Get helper and requester profiles separately
       const [helperProfile, requesterProfile] = await Promise.all([
         getUserProfile(conversationData.helper_id),
         getUserProfile(conversationData.requester_id)
       ])
 
-      // Add profiles to conversation data
       const conversationWithProfiles = {
         ...conversationData,
         helper: helperProfile,
@@ -250,20 +223,9 @@ export default function ConversationPage() {
       }
       setConversation(conversationWithProfiles)
 
-      // Get initial last seen for the other user from presence or set default
-      const otherUserId = conversationData.helper_id === currentUser.id 
-        ? conversationData.requester_id 
-        : conversationData.helper_id
-      
-      // For now, we'll rely on presence tracking for last seen
-      console.log('Other user ID for presence tracking:', otherUserId)
-
-      // Fetch messages with sender info
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
-        .select(`
-          *
-        `)
+        .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
 
@@ -272,7 +234,6 @@ export default function ConversationPage() {
         throw messagesError
       }
       
-      // Get sender profiles for messages
       const messagesWithSenders = await Promise.all(
         (messagesData || []).map(async (message) => {
           const senderProfile = await getUserProfile(message.sender_id)
@@ -305,14 +266,13 @@ export default function ConversationPage() {
   useEffect(() => {
     if (!currentUser || !conversationId) return
 
-    let messagesSubscription: ReturnType<typeof supabase.channel> | null = null
-    let presenceChannel: ReturnType<typeof supabase.channel> | null = null
+    let messagesSubscription: any
+    let presenceChannel: any
 
     const setupSubscriptions = async () => {
       try {
         setConnectionStatus('connecting')
 
-        // Subscribe to new messages
         messagesSubscription = supabase
           .channel(`messages:${conversationId}`)
           .on('postgres_changes', {
@@ -323,7 +283,6 @@ export default function ConversationPage() {
           }, async (payload) => {
             const newMessage = payload.new as Message
             
-            // Fetch sender info for the new message
             if (newMessage.sender_id !== currentUser.id) {
               const { data: senderData } = await supabase
                 .from('profiles')
@@ -335,16 +294,17 @@ export default function ConversationPage() {
             }
             
             setMessages(prev => {
-              // Prevent duplicate messages
               if (prev.some(msg => msg.id === newMessage.id)) {
                 return prev
               }
               return [...prev, newMessage]
             })
 
-            // Mark message as read if we're the recipient
             if (newMessage.sender_id !== currentUser.id) {
-              markMessageAsRead(newMessage.id)
+              await supabase
+                .from('messages')
+                .update({ is_read: true })
+                .eq('id', newMessage.id)
             }
           })
           .on('postgres_changes', {
@@ -365,11 +325,10 @@ export default function ConversationPage() {
               setConnectionStatus('connected')
             } else if (status === 'CHANNEL_ERROR') {
               setConnectionStatus('disconnected')
-              setError('Connection lost. Trying to reconnect...')
             }
           })
 
-        // Presence tracking - Use global presence channel matching the list page
+        // Presence tracking using global channel
         presenceChannel = supabase
           .channel('online_users', {
             config: {
@@ -379,17 +338,14 @@ export default function ConversationPage() {
             },
           })
           .on('presence', { event: 'sync' }, () => {
-            if (!presenceChannel) return
             const state = presenceChannel.presenceState()
             const otherUserId = getOtherUser()?.id
             
-            // Check if other user is in the presence state
             const isOnline = !!otherUserId && !!state[otherUserId] && state[otherUserId].length > 0
             
             console.log('Presence sync - Other user ID:', otherUserId, 'Is online:', isOnline, 'State:', state)
             setOtherUserOnline(isOnline)
             
-            // If user is online, clear last seen
             if (isOnline) {
               setOtherUserLastSeen(null)
             }
@@ -409,13 +365,12 @@ export default function ConversationPage() {
             
             if (key === otherUserId) {
               setOtherUserOnline(false)
-              // Set last seen to current time when they leave
               setOtherUserLastSeen(new Date().toISOString())
             }
           })
           .subscribe(async (status) => {
             console.log('Presence subscription status:', status)
-            if (status === 'SUBSCRIBED' && presenceChannel) {
+            if (status === 'SUBSCRIBED') {
               const now = new Date().toISOString()
               console.log('Tracking presence for user:', currentUser.id)
               
@@ -440,7 +395,6 @@ export default function ConversationPage() {
 
     setupSubscriptions()
 
-    // Update last seen when user leaves the page
     const handleBeforeUnload = async () => {
       console.log('User leaving page')
     }
@@ -456,19 +410,22 @@ export default function ConversationPage() {
       }
       window.removeEventListener('beforeunload', handleBeforeUnload)
       
-      // Update last seen when component unmounts
       if (currentUser) {
         console.log('Component unmounting for user:', currentUser.id)
       }
     }
   }, [currentUser, conversationId, getOtherUser])
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
 
-  // Mark a single message as read
+  useEffect(() => {
+    if (messages.length > 0 && currentUser) {
+      markUnreadMessagesAsRead()
+    }
+  }, [messages, currentUser, markUnreadMessagesAsRead])
+
   const markMessageAsRead = async (messageId: string) => {
     try {
       await supabase
@@ -480,14 +437,7 @@ export default function ConversationPage() {
     }
   }
 
-  // Mark messages as read when conversation loads
-  useEffect(() => {
-    if (messages.length > 0 && currentUser) {
-      markUnreadMessagesAsRead()
-    }
-  }, [messages, currentUser, markUnreadMessagesAsRead])
-
-const sendMessage = async (e: React.FormEvent) => {
+  const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || sending || !currentUser) return
 
@@ -622,25 +572,26 @@ const sendMessage = async (e: React.FormEvent) => {
                         </span>
                       </div>
                     )}
-                  </div>                    <div>
-                      <h1 className="text-lg font-semibold text-gray-900">
-                        {otherUser.name || 'User'}
-                      </h1>
-                      <div className="flex items-center space-x-2">
-                        {otherUserOnline ? (
-                          <>
-                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                            <span className="text-green-600 font-medium text-sm">online</span>
-                          </>
-                        ) : otherUserLastSeen ? (
-                          <span className="text-gray-500 text-sm">
-                            last seen {formatLastSeen(otherUserLastSeen)}
-                          </span>
-                        ) : (
-                          <span className="text-gray-500 text-sm">last seen recently</span>
-                        )}
-                      </div>
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-semibold text-gray-900">
+                      {otherUser.name || 'User'}
+                    </h1>
+                    <div className="flex items-center space-x-2 text-sm">
+                      {otherUserOnline ? (
+                        <>
+                          <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                          <span className="text-green-600 font-medium">online</span>
+                        </>
+                      ) : otherUserLastSeen ? (
+                        <span className="text-gray-500">
+                          last seen {formatLastSeen(otherUserLastSeen)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">last seen recently</span>
+                      )}
                     </div>
+                  </div>
                 </div>
               )}
             </div>
