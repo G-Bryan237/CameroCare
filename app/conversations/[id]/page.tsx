@@ -85,6 +85,7 @@ export default function ConversationPage() {
   const [sending, setSending] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
   const [otherUserOnline, setOtherUserOnline] = useState(false)
+  const [otherUserLastSeen, setOtherUserLastSeen] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting')
   
@@ -189,32 +190,63 @@ export default function ConversationPage() {
             }
           })
 
-        // Presence tracking
+        // Presence tracking - Use global presence channel
         presenceChannel = supabase
-          .channel(`presence:${conversationId}`)
+          .channel('online_users')
           .on('presence', { event: 'sync' }, () => {
             const state = presenceChannel.presenceState()
             const otherUserId = getOtherUser()?.id
-            setOtherUserOnline(!!otherUserId && !!state[otherUserId])
+            
+            // Check if other user is in the presence state
+            const isOnline = !!otherUserId && !!state[otherUserId] && state[otherUserId].length > 0
+            
+            console.log('Presence sync - Other user ID:', otherUserId, 'Is online:', isOnline, 'State:', state)
+            setOtherUserOnline(isOnline)
+            
+            // If user is online, clear last seen
+            if (isOnline) {
+              setOtherUserLastSeen(null)
+            }
           })
           .on('presence', { event: 'join' }, ({ key, newPresences }) => {
             const otherUserId = getOtherUser()?.id
+            console.log('User joined presence:', key, 'Other user ID:', otherUserId)
+            
             if (key === otherUserId) {
               setOtherUserOnline(true)
+              setOtherUserLastSeen(null)
             }
           })
           .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
             const otherUserId = getOtherUser()?.id
+            console.log('User left presence:', key, 'Other user ID:', otherUserId)
+            
             if (key === otherUserId) {
               setOtherUserOnline(false)
+              // Set last seen to current time when they leave
+              setOtherUserLastSeen(new Date().toISOString())
             }
           })
           .subscribe(async (status) => {
+            console.log('Presence subscription status:', status)
             if (status === 'SUBSCRIBED') {
+              const now = new Date().toISOString()
+              console.log('Tracking presence for user:', currentUser.id)
+              
               await presenceChannel.track({
                 user_id: currentUser.id,
-                online_at: new Date().toISOString(),
+                online_at: now,
               })
+              
+              // Update our last seen in the profiles table when we come online
+              try {
+                await supabase
+                  .from('profiles')
+                  .update({ last_seen: now })
+                  .eq('id', currentUser.id)
+              } catch (error) {
+                console.log('Could not update last seen in profiles:', error)
+              }
             }
           })
 
@@ -227,12 +259,59 @@ export default function ConversationPage() {
 
     setupSubscriptions()
 
+    // Update last seen when user leaves the page
+    const handleBeforeUnload = async () => {
+      if (currentUser) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({ last_seen: new Date().toISOString() })
+            .eq('id', currentUser.id)
+        } catch (error) {
+          console.log('Could not update last seen on page unload:', error)
+        }
+      }
+    }
+
+    const handleVisibilityChange = async () => {
+      if (document.hidden && currentUser) {
+        // User is switching away, update last seen
+        try {
+          await supabase
+            .from('profiles')
+            .update({ last_seen: new Date().toISOString() })
+            .eq('id', currentUser.id)
+        } catch (error) {
+          console.log('Could not update last seen on visibility change:', error)
+        }
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
       if (messagesSubscription) {
         messagesSubscription.unsubscribe()
       }
       if (presenceChannel) {
         presenceChannel.unsubscribe()
+      }
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      
+      // Update last seen when component unmounts
+      if (currentUser) {
+        (async () => {
+          try {
+            await supabase
+              .from('profiles')
+              .update({ last_seen: new Date().toISOString() })
+              .eq('id', currentUser.id)
+          } catch (error) {
+            console.log('Could not update last seen on unmount:', error)
+          }
+        })()
       }
     }
   }, [currentUser, conversationId])
@@ -300,6 +379,28 @@ export default function ConversationPage() {
         requester: requesterProfile
       }
       setConversation(conversationWithProfiles)
+
+      // Get initial last seen for the other user
+      const otherUserId = conversationData.helper_id === currentUser.id 
+        ? conversationData.requester_id 
+        : conversationData.helper_id
+      
+      // Try to get last seen from profiles table
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('last_seen')
+          .eq('id', otherUserId)
+          .single()
+        
+        if (profileError) {
+          console.log('Error fetching profile last_seen:', profileError)
+        } else if (profileData?.last_seen) {
+          setOtherUserLastSeen(profileData.last_seen)
+        }
+      } catch (error) {
+        console.log('No last seen data available for user:', error)
+      }
 
       // Fetch messages with sender info
       const { data: messagesData, error: messagesError } = await supabase
@@ -416,13 +517,31 @@ export default function ConversationPage() {
       if (userId === currentUser?.id) {
         return {
           id: currentUser.id,
-          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'You',
+          name: currentUser.user_metadata?.full_name || 
+                currentUser.user_metadata?.name || 
+                currentUser.user_metadata?.first_name + ' ' + currentUser.user_metadata?.last_name ||
+                currentUser.email?.split('@')[0] || 
+                'You',
           avatar_url: currentUser.user_metadata?.avatar_url || null
         }
       }
       
-      // For other users, try to get basic info or use fallback
-      // In a production app, you'd query a profiles table here
+      // Try to get profile from profiles table (only use existing columns)
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id, name, avatar_url')
+        .eq('id', userId)
+        .single()
+
+      if (profileData) {
+        return {
+          id: profileData.id,
+          name: profileData.name || 'Community Member',
+          avatar_url: profileData.avatar_url
+        }
+      }
+      
+      // Fallback for users not in profiles table
       return {
         id: userId,
         name: 'User',
@@ -461,6 +580,21 @@ export default function ConversationPage() {
       hour: 'numeric',
       minute: '2-digit'
     })
+  }
+
+  const formatLastSeen = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'just now'
+    if (diffInMinutes === 1) return '1 minute ago'
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`
+    if (diffInMinutes < 120) return '1 hour ago'
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`
+    if (diffInMinutes < 2880) return '1 day ago'
+    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} days ago`
+    return date.toLocaleDateString()
   }
 
   const otherUser = getOtherUser()
@@ -511,7 +645,7 @@ export default function ConversationPage() {
               
               {otherUser && (
                 <div className="flex items-center space-x-3">
-                  <div className="relative">
+                  <div>
                     {otherUser.avatar_url ? (
                       <img
                         src={otherUser.avatar_url}
@@ -525,33 +659,27 @@ export default function ConversationPage() {
                         </span>
                       </div>
                     )}
-                    {/* Online indicator */}
-                    <div className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${
-                      otherUserOnline ? 'bg-green-500' : 'bg-gray-400'
-                    }`} />
-                  </div>
-                  <div>
-                    <h1 className="text-lg font-semibold text-gray-900">
-                      {otherUser.name || 'User'}
-                    </h1>
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <span className={`inline-block w-2 h-2 rounded-full ${
-                        otherUserOnline ? 'bg-green-500' : 'bg-gray-400'
-                      }`} />
-                      <span>{otherUserOnline ? 'Online' : 'Offline'}</span>
+                  </div>                    <div>
+                      <h1 className="text-lg font-semibold text-gray-900">
+                        {otherUser.name || 'User'}
+                      </h1>
+                      <div className="flex items-center space-x-2">
+                        {otherUserOnline ? (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                            <span className="text-green-600 font-medium text-sm">online</span>
+                          </>
+                        ) : otherUserLastSeen ? (
+                          <span className="text-gray-500 text-sm">
+                            last seen {formatLastSeen(otherUserLastSeen)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500 text-sm">last seen recently</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
                 </div>
               )}
-            </div>
-
-            {/* Connection status */}
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${
-                connectionStatus === 'connected' ? 'bg-green-500' : 
-                connectionStatus === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
-              }`} />
-              <span className="text-xs text-gray-500 capitalize">{connectionStatus}</span>
             </div>
           </div>
 

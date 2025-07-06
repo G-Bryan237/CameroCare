@@ -46,6 +46,8 @@ export default function ConversationsListPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set())
+  const [userLastSeen, setUserLastSeen] = useState<Map<string, string>>(new Map())
 
   // Get current user
   useEffect(() => {
@@ -126,41 +128,133 @@ export default function ConversationsListPage() {
   useEffect(() => {
     if (currentUser) {
       fetchConversations()
+      setupPresenceTracking()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser])
 
-  // Enhanced function to get REAL user profile info  
+  // Set up presence tracking for online users
+  const setupPresenceTracking = () => {
+    if (!currentUser) return
+
+    const presenceChannel = supabase
+      .channel('online_users', {
+        config: {
+          presence: {
+            key: currentUser.id,
+          },
+        },
+      })
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState()
+        const onlineUserIds = new Set<string>()
+        const lastSeenMap = new Map<string, string>()
+        
+        Object.keys(state).forEach(userId => {
+          if (state[userId].length > 0) {
+            onlineUserIds.add(userId)
+            // Get the latest presence data
+            const latestPresence = state[userId][state[userId].length - 1] as any
+            if (latestPresence?.online_at) {
+              lastSeenMap.set(userId, latestPresence.online_at)
+            }
+          }
+        })
+        
+        setOnlineUsers(onlineUserIds)
+        setUserLastSeen(lastSeenMap)
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        console.log('User joined:', key, newPresences)
+        setOnlineUsers(prev => new Set([...prev, key]))
+        
+        // Update last seen
+        if (newPresences && newPresences.length > 0) {
+          const latestPresence = newPresences[newPresences.length - 1] as any
+          if (latestPresence?.online_at) {
+            setUserLastSeen(prev => new Map(prev).set(key, latestPresence.online_at))
+          }
+        }
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        console.log('User left:', key, leftPresences)
+        setOnlineUsers(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(key)
+          return newSet
+        })
+        
+        // Set last seen to current time when user leaves
+        const leftTime = new Date().toISOString()
+        setUserLastSeen(prev => new Map(prev).set(key, leftTime))
+        
+        // Also try to get time from presence data if available
+        if (leftPresences && leftPresences.length > 0) {
+          const latestPresence = leftPresences[leftPresences.length - 1] as any
+          if (latestPresence?.online_at) {
+            setUserLastSeen(prev => new Map(prev).set(key, latestPresence.online_at))
+          }
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          const fullName = currentUser.user_metadata?.full_name || 
+                          (currentUser.user_metadata?.first_name && currentUser.user_metadata?.last_name ? 
+                            `${currentUser.user_metadata.first_name} ${currentUser.user_metadata.last_name}` : null) ||
+                          currentUser.user_metadata?.name || 
+                          currentUser.email?.split('@')[0] || 
+                          'User'
+          
+          await presenceChannel.track({
+            user_id: currentUser.id,
+            user_name: fullName,
+            online_at: new Date().toISOString(),
+            avatar_url: currentUser.user_metadata?.avatar_url || null
+          })
+        }
+      })
+
+    // Cleanup on unmount
+    return () => {
+      presenceChannel.unsubscribe()
+    }
+  }
+
+  // Enhanced function to get REAL user profile info with full names
   const getUserProfile = async (userId: string) => {
     try {
       // If it's the current user, we have their data
       if (userId === currentUser?.id) {
+        const fullName = currentUser.user_metadata?.full_name || 
+                        (currentUser.user_metadata?.first_name && currentUser.user_metadata?.last_name ? 
+                          `${currentUser.user_metadata.first_name} ${currentUser.user_metadata.last_name}` : null) ||
+                        currentUser.user_metadata?.name || 
+                        currentUser.email?.split('@')[0] || 
+                        'You'
+        
         return {
           id: currentUser.id,
-          name: currentUser.user_metadata?.full_name || 
-                currentUser.user_metadata?.name || 
-                currentUser.email?.split('@')[0] || 
-                'You',
+          name: fullName,
           avatar_url: currentUser.user_metadata?.avatar_url || null
         }
       }
       
-      // Try to get profile from profiles table
+      // Try to get profile from profiles table (only columns that exist)
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('id, name, avatar_url, full_name')
+        .select('id, name, avatar_url')
         .eq('id', userId)
         .single()
 
       if (profileData) {
         return {
           id: profileData.id,
-          name: profileData.full_name || profileData.name || 'Community Member',
+          name: profileData.name || 'Community Member',
           avatar_url: profileData.avatar_url
         }
       }
 
-      // Try to get from posts they created
+      // Try to get from posts they created as fallback
       const { data: postData } = await supabase
         .from('posts')
         .select('author_name')
@@ -176,7 +270,7 @@ export default function ConversationsListPage() {
         }
       }
 
-      // Fallback
+      // Final fallback
       return {
         id: userId,
         name: 'Community Member',
@@ -207,8 +301,23 @@ export default function ConversationsListPage() {
     
     if (diffInMinutes < 1) return 'Just now'
     if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hour${diffInMinutes / 60 !== 1 ? 's' : ''} ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hour${Math.floor(diffInMinutes / 60) !== 1 ? 's' : ''} ago`
     if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} day${Math.floor(diffInMinutes / 1440) !== 1 ? 's' : ''} ago`
+    return date.toLocaleDateString()
+  }
+
+  const formatLastSeen = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'just now'
+    if (diffInMinutes === 1) return '1 minute ago'
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`
+    if (diffInMinutes < 120) return '1 hour ago'
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`
+    if (diffInMinutes < 2880) return '1 day ago'
+    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} days ago`
     return date.toLocaleDateString()
   }
 
@@ -313,6 +422,22 @@ export default function ConversationsListPage() {
                             <ClockIcon className="h-3 w-3 mr-1" />
                             {formatMessageTime(conversation.updated_at)}
                           </div>
+                        </div>
+
+                        {/* WhatsApp-like Status - Green dot when online */}
+                        <div className="flex items-center space-x-2 mb-2">
+                          {onlineUsers.has(otherUser?.id || '') ? (
+                            <>
+                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              <span className="text-xs text-green-600 font-medium">online</span>
+                            </>
+                          ) : userLastSeen.has(otherUser?.id || '') ? (
+                            <span className="text-xs text-gray-500">
+                              last seen {formatLastSeen(userLastSeen.get(otherUser?.id || '') || '')}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-500">last seen recently</span>
+                          )}
                         </div>
 
                         {/* Post Context */}

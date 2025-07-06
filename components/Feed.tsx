@@ -10,19 +10,9 @@ import formatDateTime from '@/lib/utils/formatDateTime';
 
 interface Post {
   _id: string
-  id: string // Add missing id property
+  id: string
   title: string
   description: string
-  post: {
-    id?: string
-    title: string
-    content: string
-    authorName?: string | null
-    authorImage?: string | null
-    authorEmail?: string | null
-    createdAt: Date | string
-    updatedAt?: Date | string
-  }
   categories: string[]
   location: string
   region: string
@@ -33,10 +23,11 @@ interface Post {
     image?: string
   }
   createdAt: string
-  created_at: string // Add missing created_at property
-  interaction_count: number // Add missing interaction_count property
-  bookmarks: number | string[] // Can be a number (count) or an array of user IDs
-  shares: number // Add missing shares property
+  created_at: string
+  interaction_count: number
+  participant_count: number // Count of people who messaged about this post
+  bookmarks: number | string[]
+  shares: number
   volunteers: Array<{
     user: {
       _id: string
@@ -119,8 +110,21 @@ export default function Feed() {
         </div>
 
         <div className="text-sm text-gray-500">
-          {session?.user?.email ? `Logged in as ${session.user.email}` : ''}
-          {format(new Date(), 'PPpp')}
+          {session?.user ? (
+            <>
+              <span>
+                Logged in as {
+                  session.user.user_metadata?.full_name || 
+                  (session.user.user_metadata?.first_name && session.user.user_metadata?.last_name ? 
+                    `${session.user.user_metadata.first_name} ${session.user.user_metadata.last_name}` : null) ||
+                  session.user.user_metadata?.name || 
+                  session.user.email?.split('@')[0] || 
+                  'User'
+                }
+              </span>
+              <span className="mx-2">•</span>
+            </>
+          ) : ''}
           {formatDateTime(new Date())}
         </div>
       </div>
@@ -140,8 +144,10 @@ export default function Feed() {
                   post={{
                     ...post,
                     id: post._id,
+                    author_id: post.author._id,
                     created_at: post.createdAt,
                     interaction_count: post.interaction_count || 0,
+                    participant_count: post.participant_count || 0,
                     bookmarks: typeof post.bookmarks === 'number' ? post.bookmarks : (Array.isArray(post.bookmarks) ? post.bookmarks.length : 0),
                     shares: post.shares || 0,
                     author: {

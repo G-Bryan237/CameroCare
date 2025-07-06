@@ -74,41 +74,101 @@ export async function POST(
       return NextResponse.json({ message: 'Failed to create help offer' }, { status: 500 })
     }
 
-    // Create conversation
-    const { data: conversation, error: conversationError } = await supabase
-      .from('conversations')
-      .insert({
+    // Create conversation using our new endpoint
+    const conversationResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/conversations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        post_id: postId,
         helper_id: session.user.id,
         requester_id: post.author_id,
-        post_id: postId,
-        last_message: message.trim()
+        initial_message: message.trim()
       })
-      .select('id')
-      .single()
+    })
 
-    if (conversationError) {
-      console.error('Error creating conversation:', conversationError)
-      return NextResponse.json({ message: 'Failed to create conversation' }, { status: 500 })
+    let conversationId = null
+    if (conversationResponse.ok) {
+      const conversationData = await conversationResponse.json()
+      conversationId = conversationData.id
+    } else {
+      // Fallback to direct creation if API call fails
+      const { data: conversation, error: conversationError } = await supabase
+        .from('conversations')
+        .insert({
+          helper_id: session.user.id,
+          requester_id: post.author_id,
+          post_id: postId,
+          last_message: message.trim()
+        })
+        .select('id')
+        .single()
+
+      if (conversationError) {
+        console.error('Error creating conversation:', conversationError)
+        return NextResponse.json({ message: 'Failed to create conversation' }, { status: 500 })
+      }
+
+      conversationId = conversation.id
+
+      // Insert first message
+      await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversation.id,
+          sender_id: session.user.id,
+          message_text: message.trim()
+        })
+
+      // Manually update participant count since we didn't use the API
+      await updatePostParticipantCount(supabase, postId, post.author_id)
     }
-
-    // Insert first message
-    await supabase
-      .from('messages')
-      .insert({
-        conversation_id: conversation.id,
-        sender_id: session.user.id,
-        message_text: message.trim()
-      })
 
     return NextResponse.json({
       message: 'Help offer sent successfully!',
       offer: helpOffer,
-      conversationId: conversation.id
+      conversationId: conversationId
     })
 
   } catch (error) {
     console.error('Error in offer help API:', error)
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// Helper function to update participant count
+async function updatePostParticipantCount(supabase: any, postId: string, authorId: string) {
+  try {
+    // Count unique participants (excluding the post author)
+    const { data: conversationData } = await supabase
+      .from('conversations')
+      .select('helper_id, requester_id')
+      .eq('post_id', postId)
+
+    let participantCount = 0
+    if (conversationData) {
+      const uniqueParticipants = new Set()
+      conversationData.forEach((conv: any) => {
+        // Add both helper and requester, but exclude the post author
+        if (conv.helper_id !== authorId) uniqueParticipants.add(conv.helper_id)
+        if (conv.requester_id !== authorId) uniqueParticipants.add(conv.requester_id)
+      })
+      participantCount = uniqueParticipants.size
+    }
+
+    // Update the post with new participant count
+    await supabase
+      .from('posts')
+      .update({ 
+        participant_count: participantCount,
+        last_activity_at: new Date().toISOString()
+      })
+      .eq('id', postId)
+
+  } catch (error) {
+    console.error('Error updating participant count:', error)
   }
 }
 

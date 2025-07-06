@@ -41,24 +41,58 @@ export async function GET(request: NextRequest) {
 
     console.log('Raw posts from database:', posts)
 
-    // For now, let's create mock author data since we don't have profiles set up
-    const transformedPosts = (posts || []).map(post => ({
-      ...post,
-      // Add default values for missing fields
-      participant_count: post.participant_count || 0,
-      bookmarks: post.bookmarks || 0,
-      shares: post.shares || 0,
-      last_activity_at: post.last_activity_at || post.created_at,
-      // Create a mock author from the author_id
-      author: {
-        id: post.author_id,
-        name: 'Community Member', // You can improve this later
-        avatar_url: null
+    // Get participant counts from conversations for each post
+    const postsWithParticipants = await Promise.all((posts || []).map(async (post) => {
+      // Count unique participants (excluding the post author)
+      const { data: conversationData, error: convError } = await supabase
+        .from('conversations')
+        .select('helper_id, requester_id')
+        .eq('post_id', post.id)
+
+      let participantCount = 0
+      if (!convError && conversationData) {
+        const uniqueParticipants = new Set()
+        conversationData.forEach(conv => {
+          // Add both helper and requester, but exclude the post author
+          if (conv.helper_id !== post.author_id) uniqueParticipants.add(conv.helper_id)
+          if (conv.requester_id !== post.author_id) uniqueParticipants.add(conv.requester_id)
+        })
+        participantCount = uniqueParticipants.size
+      }
+
+      // Get author profile for better display
+      let authorName = 'Community Member'
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('name, full_name, first_name, last_name')
+          .eq('id', post.author_id)
+          .single()
+
+        if (profileData) {
+          authorName = profileData.name || 'Community Member'
+        }
+      } catch (error) {
+        console.log('Could not fetch author profile, using fallback')
+      }
+
+      return {
+        ...post,
+        participant_count: participantCount,
+        bookmarks: post.bookmarks || 0,
+        shares: post.shares || 0,
+        last_activity_at: post.last_activity_at || post.created_at,
+        // Create author object with better name
+        author: {
+          id: post.author_id,
+          name: authorName,
+          avatar_url: null
+        }
       }
     }))
 
-    console.log('API Response - found posts:', transformedPosts.length)
-    return NextResponse.json(transformedPosts)
+    console.log('API Response - found posts:', postsWithParticipants.length)
+    return NextResponse.json(postsWithParticipants)
 
   } catch (error) {
     console.error('Error fetching posts:', error)

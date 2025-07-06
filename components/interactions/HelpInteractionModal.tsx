@@ -78,9 +78,9 @@ export default function HelpInteractionModal({
   const fetchAuthorProfile = async () => {
     try {
       const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', post.author.id)
+        .from('profiles')
+        .select('id, name, avatar_url')
+        .eq('id', post.author.id)
         .single()
 
       if (profile) {

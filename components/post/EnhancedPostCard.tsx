@@ -30,6 +30,7 @@ interface Post {
   region?: string
   is_urgent?: boolean
   status?: 'open' | 'in-progress' | 'completed'
+  interaction_count?: number
   participant_count?: number
   bookmarks?: number
   shares?: number
@@ -45,6 +46,7 @@ interface Post {
 interface PostCardProps {
   post: Post
   currentUser?: User | null
+  onInteraction?: () => void
 }
 
 interface OfferHelpModalProps {

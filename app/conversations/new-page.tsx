@@ -138,23 +138,24 @@ export default function ConversationsListPage() {
           id: currentUser.id,
           name: currentUser.user_metadata?.full_name || 
                 currentUser.user_metadata?.name || 
+                currentUser.user_metadata?.first_name + ' ' + currentUser.user_metadata?.last_name ||
                 currentUser.email?.split('@')[0] || 
                 'You',
           avatar_url: currentUser.user_metadata?.avatar_url || null
         }
       }
       
-      // Try to get profile from profiles table
+      // Try to get profile from profiles table (only existing columns)
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('id, name, avatar_url, full_name')
+        .select('id, name, avatar_url')
         .eq('id', userId)
         .single()
 
       if (profileData) {
         return {
           id: profileData.id,
-          name: profileData.full_name || profileData.name || 'Community Member',
+          name: profileData.name || 'Community Member',
           avatar_url: profileData.avatar_url
         }
       }
