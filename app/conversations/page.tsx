@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { 
   ChatBubbleLeftRightIcon,
-  UserCircleIcon,
-  ClockIcon
+  UserCircleIcon
 } from '@heroicons/react/24/solid'
 import Link from 'next/link'
 
@@ -418,26 +417,21 @@ export default function ConversationsListPage() {
                           <h3 className="text-sm font-semibold text-gray-900 truncate">
                             {otherUser?.name || 'Unknown User'}
                           </h3>
-                          <div className="flex items-center text-xs text-gray-500">
-                            <ClockIcon className="h-3 w-3 mr-1" />
-                            {formatMessageTime(conversation.updated_at)}
+                          {/* Online Status on the right */}
+                          <div className="flex items-center space-x-2">
+                            {onlineUsers.has(otherUser?.id || '') ? (
+                              <>
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                <span className="text-xs text-green-600 font-medium">online</span>
+                              </>
+                            ) : userLastSeen.has(otherUser?.id || '') ? (
+                              <span className="text-xs text-gray-500">
+                                last seen {formatLastSeen(userLastSeen.get(otherUser?.id || '') || '')}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-500">last seen recently</span>
+                            )}
                           </div>
-                        </div>
-
-                        {/* WhatsApp-like Status - Green dot when online */}
-                        <div className="flex items-center space-x-2 mb-2">
-                          {onlineUsers.has(otherUser?.id || '') ? (
-                            <>
-                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                              <span className="text-xs text-green-600 font-medium">online</span>
-                            </>
-                          ) : userLastSeen.has(otherUser?.id || '') ? (
-                            <span className="text-xs text-gray-500">
-                              last seen {formatLastSeen(userLastSeen.get(otherUser?.id || '') || '')}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-500">last seen recently</span>
-                          )}
                         </div>
 
                         {/* Post Context */}
