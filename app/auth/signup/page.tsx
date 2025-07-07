@@ -56,7 +56,7 @@ export default function SignUp() {
       } else {
         // Show success message and redirect
         setError('') // Clear any previous errors
-        alert('Account created successfully! Check your email for verification link.')
+        alert('Account created successfully!')
         
         // Force redirect after a short delay to ensure alert is shown
         setTimeout(() => {
