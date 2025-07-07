@@ -295,4 +295,85 @@
   color: rgb(67 56 202);
 }
 
+/* Line clamp utilities for text truncation with enhanced mobile support */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Enhanced responsive improvements for mobile PostCards */
+@media (max-width: 640px) {
+  .line-clamp-3 {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  
+  /* Better touch targets on mobile */
+  .post-card-hover {
+    border-radius: 0.75rem;
+  }
+  
+  /* Improved button spacing on mobile */
+  .mobile-button-spacing {
+    gap: 0.5rem;
+  }
+  
+  /* Compact text on mobile */
+  .mobile-compact {
+    line-height: 1.3;
+  }
+}
+
+/* Enhanced hover effects for better interaction feedback */
+.post-card-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.post-card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Improved button hover states for mobile */
+@media (hover: hover) {
+  .mobile-hover-scale:hover {
+    transform: scale(1.02);
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) {
+  .post-card-hover:hover {
+    transform: none;
+  }
+  
+  /* Better touch feedback */
+  .touch-feedback:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+}
+
 

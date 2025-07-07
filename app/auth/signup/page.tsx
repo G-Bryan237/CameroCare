@@ -54,9 +54,14 @@ export default function SignUp() {
       if (error) {
         setError(error.message)
       } else {
-        // Show success message or redirect
-        alert('Check your email for verification link!')
-        router.push('/auth/signin')
+        // Show success message and redirect
+        setError('') // Clear any previous errors
+        alert('Account created successfully! Check your email for verification link.')
+        
+        // Force redirect after a short delay to ensure alert is shown
+        setTimeout(() => {
+          router.push('/auth/signin')
+        }, 1500)
       }
     } catch {
       setError('An error occurred during registration')

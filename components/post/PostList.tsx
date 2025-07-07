@@ -7,7 +7,6 @@ import {
   MapPin, 
   Share2, 
   Bookmark,
-  Flag,
   TrendingUp,
   Users,
   CheckCircle,
@@ -16,12 +15,10 @@ import {
   Facebook,
   Twitter,
   MessageCircle,
-  Instagram,
   Heart,
   AlertTriangle,
-  Shield,
   Star,
-  HandHeart // Add this for Request Help
+  HandHeart
 } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { User } from '@supabase/auth-helpers-nextjs'
@@ -74,7 +71,7 @@ interface RequestHelpModalProps {
   onSubmit: (message: string) => Promise<{ conversationId: string }>
 }
 
-function RequestHelpModal({ isOpen, onClose, post, currentUser, onSubmit }: RequestHelpModalProps) {
+function RequestHelpModal({ isOpen, onClose, post, onSubmit }: RequestHelpModalProps) {
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -649,7 +646,8 @@ function PostCard({ post, currentUser }: PostCardProps) {
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden post-card-hover">
+        {/* Urgent Badge */}
         {post.is_urgent && (
           <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-2 text-sm font-medium text-center flex items-center justify-center space-x-2">
             <AlertTriangle className="h-4 w-4" />
@@ -657,161 +655,208 @@ function PostCard({ post, currentUser }: PostCardProps) {
           </div>
         )}
 
-        <div className="p-6">
-          {/* Header */}
+        <div className="p-3 sm:p-4 md:p-6">
+          {/* Header with enhanced mobile layout */}
           <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-start space-x-3 min-w-0 flex-1">
               <div className="flex-shrink-0 relative">
                 {authorInfo.avatar_url ? (
                   <img
                     src={authorInfo.avatar_url}
                     alt={authorInfo.name}
-                    className="h-12 w-12 rounded-full object-cover"
+                    className="h-8 w-8 sm:h-10 md:h-12 sm:w-10 md:w-12 rounded-full object-cover shadow-sm"
                   />
                 ) : (
-                  <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
-                    post.type === 'HELP_REQUEST' 
-                      ? 'bg-gradient-to-br from-red-500 to-red-600' 
-                      : 'bg-gradient-to-br from-blue-500 to-blue-600'
-                  }`}>
-                    <span className="text-sm font-medium text-white">
-                      {authorInfo.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'CM'}
+                  <div className="h-8 w-8 sm:h-10 md:h-12 sm:w-10 md:w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-sm">
+                    <span className="text-white font-semibold text-xs sm:text-sm md:text-base">
+                      {authorInfo.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                     </span>
                   </div>
                 )}
-                {/* Trust Badge */}
-                <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1">
-                  <Shield className="h-3 w-3 text-white" />
-                </div>
+                {/* Online status indicator - smaller on mobile */}
+                <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 h-2 w-2 sm:h-3 sm:w-3 bg-green-400 border-2 border-white rounded-full"></div>
               </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h4 className="font-semibold text-gray-900">{authorInfo.name}</h4>
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm text-gray-600">4.8</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center space-x-1.5 sm:space-x-2 mb-1">
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate flex-1">
+                    {authorInfo.name}
+                  </h3>
+                  <div className={`px-1.5 py-0.5 sm:px-2 rounded-full text-xs font-medium flex-shrink-0 ${
+                    post.type === 'HELP_REQUEST' 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    <span className="hidden sm:inline">
+                      {post.type === 'HELP_REQUEST' ? 'Needs Help' : 'Offers Help'}
+                    </span>
+                    <span className="sm:hidden">
+                      {post.type === 'HELP_REQUEST' ? 'Need' : 'Offer'}
+                    </span>
                   </div>
-                  {isOwnPost && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                      Your Post
+                </div>
+                <div className="flex items-center space-x-2 sm:space-x-3 text-xs text-gray-500">
+                  <span className="flex items-center space-x-1 flex-shrink-0">
+                    <Clock className="h-3 w-3" />
+                    <span>{formatDateTime(post.created_at)}</span>
+                  </span>
+                  {(post.location || post.region) && (
+                    <span className="flex items-center space-x-1 truncate min-w-0">
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">
+                        {[post.location, post.region].filter(Boolean).join(', ')}
+                      </span>
                     </span>
                   )}
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <MapPin className="h-4 w-4" />
-                  <span>
-                    {[post.location, post.region].filter(Boolean).join(', ') || 'Location not specified'}
-                  </span>
-                  <Clock className="h-4 w-4" />
-                  <span>{formatDateTime(post.created_at)}</span>
-                </div>
               </div>
             </div>
             
-            {isPopular && (
-              <span className="flex items-center space-x-1 text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
-                <TrendingUp className="h-3 w-3" />
-                <span>Popular</span>
-              </span>
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">{post.title}</h2>
-            <p className="text-gray-600 line-clamp-3">{post.description}</p>
-            
-            {/* Categories */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {post.categories?.map((category, index) => (
-                <span 
-                  key={index} 
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    post.type === 'HELP_REQUEST' 
-                      ? 'bg-red-50 text-red-700'
-                      : 'bg-blue-50 text-blue-700'
-                  }`}
-                >
-                  {category}
+            {/* Status badges - improved mobile layout */}
+            <div className="flex flex-col items-end space-y-1 ml-1.5 sm:ml-2 flex-shrink-0">
+              {isPopular && (
+                <span className="flex items-center space-x-1 text-xs font-medium text-orange-600 bg-orange-50 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full border border-orange-200">
+                  <TrendingUp className="h-3 w-3" />
+                  <span className="hidden md:inline">Popular</span>
                 </span>
-              ))}
+              )}
+              {post.status && (
+                <span className={`text-xs font-medium px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full ${
+                  post.status === 'completed' ? 'bg-green-100 text-green-700 border border-green-200' :
+                  post.status === 'in-progress' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                  'bg-gray-100 text-gray-700 border border-gray-200'
+                }`}>
+                  <span className="hidden sm:inline">
+                    {post.status === 'completed' ? 'Completed' : 
+                     post.status === 'in-progress' ? 'In Progress' : 'Open'}
+                  </span>
+                  <span className="sm:hidden">
+                    {post.status === 'completed' ? '✓' : 
+                     post.status === 'in-progress' ? '⏳' : '○'}
+                  </span>
+                </span>
+              )}
+              {isOwnPost && (
+                <span className="px-1.5 py-0.5 sm:px-2 sm:py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full border border-indigo-200">
+                  <span className="hidden sm:inline">Your Post</span>
+                  <span className="sm:hidden">Mine</span>
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2 text-gray-500">
-                <Users className="h-5 w-5" />
-                <span className="text-sm">{post.participant_count || 0} interested</span>
+          {/* Content with enhanced spacing and mobile optimization */}
+          <div className="mb-4">
+            <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-2 leading-tight line-clamp-2">
+              {post.title}
+            </h2>
+            <p className="text-gray-600 text-sm sm:text-base leading-relaxed line-clamp-2 sm:line-clamp-3 mb-3">
+              {post.description}
+            </p>
+            
+            {/* Categories with optimized mobile layout */}
+            {post.categories && post.categories.length > 0 && (
+              <div className="flex flex-wrap gap-1 sm:gap-1.5">
+                {/* Show only first 2 categories on mobile, 3 on desktop */}
+                {post.categories.slice(0, 2).map((category, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                  >
+                    {category}
+                  </span>
+                ))}
+                {/* Third category only visible on sm and up */}
+                {post.categories.length > 2 && (
+                  <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
+                    {post.categories[2]}
+                  </span>
+                )}
+                {/* More indicator */}
+                {post.categories.length > 3 && (
+                  <span className="inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                    <span className="sm:hidden">+{post.categories.length - 2}</span>
+                    <span className="hidden sm:inline">+{post.categories.length - 3} more</span>
+                  </span>
+                )}
+                {post.categories.length === 3 && (
+                  <span className="sm:hidden inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                    +1
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Stats and Actions with enhanced mobile layout */}
+          <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-gray-100">
+            {/* Left side - Stats with compact mobile design */}
+            <div className="flex items-center space-x-3 sm:space-x-4 md:space-x-6">
+              <div className="flex items-center space-x-1 sm:space-x-1.5 text-gray-500">
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm font-medium">{post.participant_count || 0}</span>
+                <span className="text-xs hidden md:inline">participants</span>
               </div>
               
               <button
                 onClick={handleBookmark}
                 disabled={isBookmarkLoading || !currentUser}
-                className={`flex items-center space-x-2 ${
-                  isBookmarked ? 'text-yellow-500' : 'text-gray-500'
-                } hover:text-yellow-500 transition-colors ${
-                  isBookmarkLoading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className={`flex items-center space-x-1 sm:space-x-1.5 transition-colors ${
+                  isBookmarked ? 'text-yellow-500' : 'text-gray-500 hover:text-yellow-500'
+                } ${isBookmarkLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <Bookmark className={`h-5 w-5 ${isBookmarked ? 'fill-current' : ''}`} />
-                <span className="text-sm">{post.bookmarks || 0}</span>
+                <Bookmark className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isBookmarked ? 'fill-current' : ''}`} />
+                <span className="text-xs sm:text-sm font-medium hidden sm:inline">
+                  {isBookmarked ? 'Saved' : 'Save'}
+                </span>
               </button>
               
               <button 
                 onClick={() => handleShare()}
-                className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors"
+                className="flex items-center space-x-1 sm:space-x-1.5 text-gray-500 hover:text-blue-500 transition-colors"
               >
-                <Share2 className="h-5 w-5" />
-                <span className="text-sm">{localShares}</span>
+                <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm font-medium">{localShares}</span>
+                <span className="text-xs hidden md:inline">shares</span>
               </button>
             </div>
 
-            {/* Action Button - Now handles both types */}
-            {(post.type === 'HELP_REQUEST' || post.type === 'HELP_OFFER') && (
-              <div className="relative">
-                <button 
-                  onClick={handleActionButton}
-                  disabled={isOwnPost || !currentUser}
-                  className={`px-6 py-2.5 text-white rounded-lg font-medium transition-all ${
-                    isOwnPost 
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : !currentUser
-                      ? 'bg-gray-400 cursor-pointer hover:bg-gray-500'
-                      : post.type === 'HELP_REQUEST'
-                      ? 'bg-red-600 hover:bg-red-700 hover:shadow-lg transform hover:scale-105'
-                      : 'bg-green-600 hover:bg-green-700 hover:shadow-lg transform hover:scale-105'
-                  }`}
-                  title={
-                    isOwnPost 
-                      ? `You cannot ${post.type === 'HELP_REQUEST' ? 'offer help on' : 'request help from'} your own post`
-                      : !currentUser
-                      ? "Sign in to interact"
-                      : post.type === 'HELP_REQUEST'
-                      ? "Offer help to this person"
-                      : "Request help from this person"
-                  }
-                >
-                  <span className="flex items-center space-x-2">
-                    {post.type === 'HELP_REQUEST' ? (
-                      <Heart className="h-4 w-4" />
-                    ) : (
-                      <HandHeart className="h-4 w-4" />
-                    )}
-                    <span>
-                      {isOwnPost 
-                        ? 'Your Post' 
-                        : !currentUser 
-                        ? 'Sign In' 
-                        : post.type === 'HELP_REQUEST'
-                        ? 'Offer Help'
-                        : 'Request Help'
-                      }
-                    </span>
-                  </span>
-                </button>
-              </div>
+            {/* Right side - Action Button with improved responsive design */}
+            {(canOfferHelp || canRequestHelp) && (
+              <button
+                onClick={handleActionButton}
+                className={`px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm touch-feedback ${
+                  canOfferHelp
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200'
+                    : 'bg-green-600 hover:bg-green-700 text-white shadow-green-200'
+                }`}
+              >
+                <span className="flex items-center space-x-1 sm:space-x-1.5">
+                  {canOfferHelp ? (
+                    <>
+                      <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Offer Help</span>
+                      <span className="sm:hidden">Help</span>
+                    </>
+                  ) : (
+                    <>
+                      <HandHeart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Request Help</span>
+                      <span className="sm:hidden">Request</span>
+                    </>
+                  )}
+                </span>
+              </button>
+            )}
+
+            {/* Sign in prompt for non-authenticated users */}
+            {!currentUser && !isOwnPost && (
+              <button
+                onClick={() => router.push('/auth/signin')}
+                className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95 touch-feedback"
+              >
+                <span className="hidden sm:inline">Sign in to help</span>
+                <span className="sm:hidden">Sign in</span>
+              </button>
             )}
           </div>
         </div>
@@ -936,19 +981,19 @@ export default function PostList({ type, categories, excludeOwnPosts = false }: 
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center py-8 sm:py-12">
+        <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-blue-500"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-600 mb-4">{error}</p>
+      <div className="text-center py-6 sm:py-8 px-4">
+        <p className="text-red-600 mb-3 sm:mb-4 text-sm sm:text-base">{error}</p>
         <button 
           onClick={refreshPosts}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base touch-feedback transition-colors"
         >
           Try Again
         </button>
@@ -957,14 +1002,14 @@ export default function PostList({ type, categories, excludeOwnPosts = false }: 
   }
 
   return (
-    <div className="space-y-6">
-      {/* Sort Options */}
-      <div className="flex justify-end space-x-2 mb-2">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Sort Options with improved mobile spacing */}
+      <div className="flex justify-end space-x-1.5 sm:space-x-2 mb-2">
         {(['recent', 'urgent', 'popular'] as const).map((option) => (
           <button
             key={option}
             onClick={() => setSortBy(option)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-lg ${
+            className={`px-2.5 py-1.5 sm:px-3 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
               sortBy === option
                 ? 'bg-blue-100 text-blue-700'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -975,8 +1020,8 @@ export default function PostList({ type, categories, excludeOwnPosts = false }: 
         ))}
       </div>
 
-      {/* Posts */}
-      <div className="space-y-6">
+      {/* Posts with responsive spacing */}
+      <div className="space-y-4 sm:space-y-6">
         {sortedPosts.map((post) => (
           <PostCard 
             key={post.id} 
@@ -986,7 +1031,7 @@ export default function PostList({ type, categories, excludeOwnPosts = false }: 
         ))}
 
         {sortedPosts.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">
             {excludeOwnPosts && currentUser ? 
               "No posts from other users found for the selected filters." :
               "No posts found for the selected filters."

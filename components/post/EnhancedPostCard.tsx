@@ -308,27 +308,28 @@ export default function EnhancedPostCard({ post, currentUser }: PostCardProps) {
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow post-card-hover">
         {post.is_urgent && (
-          <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-2 text-sm font-medium text-center flex items-center justify-center space-x-2">
-            <AlertTriangle className="h-4 w-4" />
-            <span>Urgent Request - Help Needed Now</span>
+          <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-center flex items-center justify-center space-x-2">
+            <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Urgent Request - Help Needed Now</span>
+            <span className="sm:hidden">Urgent</span>
           </div>
         )}
 
-        <div className="p-6">
-          {/* Header */}
+        <div className="p-4 sm:p-6">
+          {/* Header with enhanced mobile layout */}
           <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
+              <div className="flex-shrink-0 relative">
                 {authorInfo.avatar_url ? (
                   <img
                     src={authorInfo.avatar_url}
                     alt={authorInfo.name}
-                    className="h-12 w-12 rounded-full object-cover"
+                    className="h-10 w-10 sm:h-12 sm:w-12 rounded-full object-cover"
                   />
                 ) : (
-                  <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                  <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center ${
                     post.type === 'HELP_REQUEST' 
                       ? 'bg-gradient-to-br from-red-500 to-red-600' 
                       : 'bg-gradient-to-br from-blue-500 to-blue-600'
@@ -343,40 +344,41 @@ export default function EnhancedPostCard({ post, currentUser }: PostCardProps) {
                   <Shield className="h-3 w-3 text-white" />
                 </div>
               </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h4 className="font-semibold text-gray-900">{authorInfo.name}</h4>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center space-x-2 mb-1">
+                  <h4 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{authorInfo.name}</h4>
                   <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm text-gray-600">4.8</span>
+                    <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 fill-current" />
+                    <span className="text-xs sm:text-sm text-gray-600">4.8</span>
                   </div>
                   {isOwnPost && (
                     <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                      Your Post
+                      <span className="hidden sm:inline">Your Post</span>
+                      <span className="sm:hidden">Mine</span>
                     </span>
                   )}
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <MapPin className="h-4 w-4" />
-                  <span>{post.location}</span>
-                  <Clock className="h-4 w-4" />
+                <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500">
+                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <span className="truncate">{post.location}</span>
+                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                   <span>{formatDateTime(post.created_at)}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Content */}
+          {/* Content with improved mobile spacing */}
           <div className="mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">{post.title}</h2>
-            <p className="text-gray-600 line-clamp-3">{post.description}</p>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{post.title}</h2>
+            <p className="text-gray-600 text-sm sm:text-base line-clamp-2 sm:line-clamp-3 mb-3">{post.description}</p>
             
-            {/* Categories */}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {post.categories?.map((category, index) => (
+            {/* Categories with responsive layout */}
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              {post.categories?.slice(0, 3).map((category, index) => (
                 <span 
                   key={index} 
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  className={`px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium ${
                     post.type === 'HELP_REQUEST' 
                       ? 'bg-red-50 text-red-700'
                       : 'bg-blue-50 text-blue-700'
@@ -385,33 +387,39 @@ export default function EnhancedPostCard({ post, currentUser }: PostCardProps) {
                   {category}
                 </span>
               ))}
+              {post.categories && post.categories.length > 3 && (
+                <span className="px-2 py-1 sm:px-3 rounded-full text-xs sm:text-sm font-medium bg-gray-100 text-gray-500">
+                  +{post.categories.length - 3}
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2 text-gray-500">
-                <Users className="h-5 w-5" />
-                <span className="text-sm">{post.participant_count || 0} interested</span>
+          {/* Actions with enhanced mobile layout */}
+          <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-gray-100">
+            <div className="flex items-center space-x-4 sm:space-x-6">
+              <div className="flex items-center space-x-1.5 sm:space-x-2 text-gray-500">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm">{post.participant_count || 0}</span>
+                <span className="text-xs hidden sm:inline">interested</span>
               </div>
-              <button className="flex items-center space-x-2 text-gray-500 hover:text-yellow-500 transition-colors">
-                <Bookmark className="h-5 w-5" />
-                <span className="text-sm">{post.bookmarks || 0}</span>
+              <button className="flex items-center space-x-1.5 sm:space-x-2 text-gray-500 hover:text-yellow-500 transition-colors">
+                <Bookmark className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm">{post.bookmarks || 0}</span>
               </button>
-              <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
-                <Share2 className="h-5 w-5" />
-                <span className="text-sm">{localShares}</span>
+              <button className="flex items-center space-x-1.5 sm:space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
+                <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm">{localShares}</span>
               </button>
             </div>
 
-            {/* Action Button */}
+            {/* Action Button with improved responsive design */}
             {post.type === 'HELP_REQUEST' && (
               <div className="relative">
                 <button 
                   onClick={handleActionButton}
                   disabled={isOwnPost || !currentUser}
-                  className={`px-6 py-2.5 text-white rounded-lg font-medium transition-all ${
+                  className={`px-4 py-2 sm:px-6 sm:py-2.5 text-xs sm:text-sm text-white rounded-lg font-medium transition-all touch-feedback ${
                     isOwnPost 
                       ? 'bg-gray-400 cursor-not-allowed'
                       : !currentUser
@@ -426,8 +434,8 @@ export default function EnhancedPostCard({ post, currentUser }: PostCardProps) {
                       : "Offer help to this person"
                   }
                 >
-                  <span className="flex items-center space-x-2">
-                    <Heart className="h-4 w-4" />
+                  <span className="flex items-center space-x-1.5 sm:space-x-2">
+                    <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     <span>
                       {isOwnPost 
                         ? 'Your Post' 
