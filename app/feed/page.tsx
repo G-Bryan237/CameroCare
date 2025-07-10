@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react'
 import { ASSISTANCE_CATEGORIES } from '@/types'
 import PostList from '@/components/post/PostList'
 import Logo from '@/components/logo'
+import Notifications from '@/components/Notifications'
 import { 
   PlusIcon, 
-  BellIcon, 
   UserCircleIcon, 
   MapPinIcon,
   ChatBubbleLeftRightIcon,
@@ -291,7 +291,7 @@ export default function FeedPage() {
               </div>
               <div className="text-center bg-white/50 rounded-lg p-3">
                 <div className="text-lg font-bold text-yellow-600">
-                  {loading ? '...' : userStats?.averageRating.toFixed(1) || '0.0'}⭐
+                  {loading ? '...' : userStats?.averageRating.toFixed(1) || '0.0'}★
                 </div>
                 <div className="text-xs text-gray-600">Rating</div>
               </div>
@@ -395,10 +395,7 @@ export default function FeedPage() {
                 <button className="p-2.5 sm:p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200">
                   <MapPinIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </button>
-                <button className="relative p-2.5 sm:p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200">
-                  <BellIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-                </button>
+                <Notifications />
                 <Link 
                   href="/conversations" 
                   className="p-2.5 sm:p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200"
