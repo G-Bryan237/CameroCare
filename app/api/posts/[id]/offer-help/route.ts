@@ -41,16 +41,28 @@ export async function POST(
       return NextResponse.json({ message: 'You cannot offer help on your own post' }, { status: 400 })
     }
 
-    // Check for existing offer
-    const { data: existingOffer } = await supabase
+    // Check for existing offer with better error handling
+    const { data: existingOffers, error: checkError } = await supabase
       .from('help_offers')
-      .select('id')
+      .select('id, created_at, status')
       .eq('post_id', postId)
       .eq('helper_id', session.user.id)
-      .single()
-
-    if (existingOffer) {
-      return NextResponse.json({ message: 'You have already offered help for this post' }, { status: 409 })
+    
+    if (checkError) {
+      console.error('Error checking existing offers:', checkError);
+      // Continue anyway - don't block on check error
+    }
+    
+    // If an offer exists but was declined, allow a new offer
+    const activeOffer = existingOffers?.find(offer => offer.status !== 'declined');
+    
+    if (activeOffer) {
+      return NextResponse.json({ 
+        message: 'You have already offered help for this post', 
+        offerId: activeOffer.id,
+        offerDate: activeOffer.created_at,
+        status: activeOffer.status
+      }, { status: 409 })
     }
 
     // Create help offer with all fields

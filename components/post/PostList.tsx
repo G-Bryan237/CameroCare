@@ -284,6 +284,22 @@ function OfferHelpModal({ isOpen, onClose, post, currentUser, onSubmit }: OfferH
     }
   }
 
+  // Add a function to get proper display name
+  const getUserDisplayName = () => {
+    if (currentUser.user_metadata?.full_name) return currentUser.user_metadata.full_name;
+    if (currentUser.user_metadata?.name) return currentUser.user_metadata.name;
+    if (currentUser.user_metadata?.first_name && currentUser.user_metadata?.last_name) {
+      return `${currentUser.user_metadata.first_name} ${currentUser.user_metadata.last_name}`;
+    }
+    return currentUser.email?.split('@')[0] || 'Helper';
+  }
+
+  // Add a function to get user initials
+  const getUserInitials = () => {
+    const name = getUserDisplayName();
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  }
+
   if (!isOpen) return null
 
   return (
@@ -338,30 +354,45 @@ function OfferHelpModal({ isOpen, onClose, post, currentUser, onSubmit }: OfferH
             <h3 className="font-medium text-gray-900 mb-3">Your Helper Profile</h3>
             <div className="flex items-center space-x-3">
               <div className="relative">
-                <div className="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-medium">
-                    {currentUser.user_metadata?.name?.split(' ').map((n: string) => n[0]).join('') || 
-                     currentUser.email?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1">
-                  <CheckCircle className="h-3 w-3 text-white" />
-                </div>
+                {currentUser.user_metadata?.avatar_url ? (
+                  <div className="h-12 w-12 rounded-full overflow-hidden">
+                    <img 
+                      src={currentUser.user_metadata.avatar_url} 
+                      alt={getUserDisplayName()} 
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1">
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-medium">
+                      {getUserInitials()}
+                    </span>
+                    <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1">
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-2">
-                  <span className="font-medium text-gray-900">
-                    {currentUser.user_metadata?.name || currentUser.email?.split('@')[0]}
+                  <span className="font-medium text-gray-900 truncate">
+                    {getUserDisplayName()}
                   </span>
+                  {/* Show real rating if available, otherwise a placeholder */}
                   <div className="flex items-center space-x-1">
                     <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                    <span className="text-xs text-gray-600">4.8</span>
+                    <span className="text-xs text-gray-600">
+                      {currentUser.user_metadata?.rating || '4.8'}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 text-xs text-gray-600">
-                  <span>Community Helper</span>
+                  <span>{currentUser.user_metadata?.role || 'Community Helper'}</span>
                   <span>•</span>
-                  <span>12 helps given</span>
+                  <span>{currentUser.user_metadata?.helps_given || '0'} helps given</span>
                 </div>
               </div>
             </div>
@@ -497,20 +528,36 @@ function PostCard({ post, currentUser }: PostCardProps) {
   }
 
   const handleOfferHelp = async (message: string) => {
-    const response = await fetch(`/api/posts/${post.id}/offer-help`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message }),
-    })
+    try {
+      const response = await fetch(`/api/posts/${post.id}/offer-help`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        // Special handling for 409 Conflict (already offered help)
+        if (response.status === 409) {
+          alert(`You have already offered help for this post. ${result.status === 'pending' ? 'Your offer is pending.' : `Status: ${result.status}`}`);
+          
+          // If there's a conversation ID available, redirect to it
+          if (result.conversationId) {
+            window.location.href = `/conversations/${result.conversationId}`;
+            return { conversationId: result.conversationId };
+          }
+          throw new Error(result.message);
+        }
+        throw new Error(result.message || 'Failed to send help offer');
+      }
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Failed to send help offer')
+      return result;
+    } catch (error) {
+      throw error;
     }
-
-    return await response.json()
   }
 
   const handleRequestHelp = async (message: string) => {
