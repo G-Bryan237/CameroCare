@@ -75,6 +75,14 @@ function RequestHelpModal({ isOpen, onClose, post, onSubmit }: RequestHelpModalP
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [helperStats, setHelperStats] = useState<{
+    rating: number
+    helpsGiven: number
+    successRate: number
+    avgResponseTime: string
+    isVerified: boolean
+  } | null>(null)
+  const [loadingStats, setLoadingStats] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -82,8 +90,44 @@ function RequestHelpModal({ isOpen, onClose, post, onSubmit }: RequestHelpModalP
       const defaultMessage = `Hi! I'd like to request your help with "${post.title}". I'm interested in the ${post.categories.join(', ')} assistance you're offering. Could we discuss the details?`
       setMessage(defaultMessage)
       setError('')
+      fetchHelperStats()
     }
   }, [isOpen, post])
+
+  const fetchHelperStats = async () => {
+    if (!post.author_id) return
+    
+    setLoadingStats(true)
+    try {
+      // Fetch helper's actual statistics
+      const response = await fetch(`/api/users/${post.author_id}/stats`)
+      if (response.ok) {
+        const stats = await response.json()
+        setHelperStats(stats)
+      } else {
+        // Fallback to default stats if API fails
+        setHelperStats({
+          rating: 0,
+          helpsGiven: 0,
+          successRate: 0,
+          avgResponseTime: 'N/A',
+          isVerified: false
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching helper stats:', error)
+      // Fallback stats
+      setHelperStats({
+        rating: 0,
+        helpsGiven: 0,
+        successRate: 0,
+        avgResponseTime: 'N/A',
+        isVerified: false
+      })
+    } finally {
+      setLoadingStats(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -132,10 +176,15 @@ function RequestHelpModal({ isOpen, onClose, post, onSubmit }: RequestHelpModalP
           {/* Helper Preview */}
           <div className="bg-green-50 rounded-lg p-4 mb-6">
             <div className="flex items-start space-x-3">
-              <div className="h-12 w-12 bg-green-600 rounded-full flex items-center justify-center">
+              <div className="h-12 w-12 bg-green-600 rounded-full flex items-center justify-center relative">
                 <span className="text-white font-medium">
                   {post.author?.name?.split(' ').map(n => n[0]).join('') || 'H'}
                 </span>
+                {helperStats?.isVerified && (
+                  <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1">
+                    <CheckCircle className="h-3 w-3 text-white" />
+                  </div>
+                )}
               </div>
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-2">
@@ -143,12 +192,27 @@ function RequestHelpModal({ isOpen, onClose, post, onSubmit }: RequestHelpModalP
                     {post.author?.name || 'Helper'}
                   </h3>
                   <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm text-gray-600">4.9</span>
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`h-4 w-4 ${
+                            star <= (helperStats?.rating || 0)
+                              ? 'text-yellow-400 fill-current'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      {loadingStats ? '...' : (helperStats?.rating?.toFixed(1) || '0.0')}
+                    </span>
                   </div>
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                    Verified Helper
-                  </span>
+                  {helperStats?.isVerified && (
+                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                      Verified Helper
+                    </span>
+                  )}
                 </div>
                 <h4 className="font-medium text-gray-900 mb-1">{post.title}</h4>
                 <p className="text-sm text-gray-600 line-clamp-2">{post.description}</p>
@@ -156,7 +220,7 @@ function RequestHelpModal({ isOpen, onClose, post, onSubmit }: RequestHelpModalP
                   <MapPin className="h-3 w-3" />
                   <span>{post.location}, {post.region}</span>
                   <span>•</span>
-                  <span>Response time: ~2 hours</span>
+                  <span>Response time: {loadingStats ? '...' : (helperStats?.avgResponseTime || 'N/A')}</span>
                 </div>
               </div>
             </div>
@@ -167,15 +231,21 @@ function RequestHelpModal({ isOpen, onClose, post, onSubmit }: RequestHelpModalP
             <h3 className="font-medium text-gray-900 mb-3">Helper Profile</h3>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="bg-white rounded-lg p-3">
-                <div className="text-lg font-semibold text-blue-600">28</div>
+                <div className="text-lg font-semibold text-blue-600">
+                  {loadingStats ? '...' : (helperStats?.helpsGiven || 0)}
+                </div>
                 <div className="text-xs text-gray-600">People Helped</div>
               </div>
               <div className="bg-white rounded-lg p-3">
-                <div className="text-lg font-semibold text-green-600">98%</div>
+                <div className="text-lg font-semibold text-green-600">
+                  {loadingStats ? '...' : `${helperStats?.successRate || 0}%`}
+                </div>
                 <div className="text-xs text-gray-600">Success Rate</div>
               </div>
               <div className="bg-white rounded-lg p-3">
-                <div className="text-lg font-semibold text-orange-600">2h</div>
+                <div className="text-lg font-semibold text-orange-600">
+                  {loadingStats ? '...' : (helperStats?.avgResponseTime || 'N/A')}
+                </div>
                 <div className="text-xs text-gray-600">Avg Response</div>
               </div>
             </div>
