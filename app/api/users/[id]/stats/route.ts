@@ -85,10 +85,9 @@ export async function GET(
     // Check if user is verified (has completed at least 5 helps with good rating)
     const isVerified = helpsGiven >= 5 && rating >= 4.0
 
-    // If no ratings exist, estimate based on activity
-    if (rating === 0 && helpsGiven > 0) {
-      // Give a base rating between 3.5-4.5 based on activity
-      rating = 3.5 + Math.min(helpsGiven * 0.1, 1.0)
+    // Default rating is 0 for users who haven't been rated
+    if (rating === 0 && helpsGiven === 0) {
+      rating = 0 // Keep at 0 for new users
     }
 
     // If no success rate data, estimate based on activity
@@ -98,7 +97,7 @@ export async function GET(
     }
 
     const stats = {
-      rating: Math.round(rating * 10) / 10, // Round to 1 decimal
+      rating: Math.round(rating * 10) / 10, // Round to 1 decimal, default 0
       helpsGiven,
       successRate,
       avgResponseTime,
@@ -115,4 +114,5 @@ export async function GET(
       { status: 500 }
     )
   }
+}
 
