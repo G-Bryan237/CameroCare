@@ -35,10 +35,47 @@ export default function Notifications() {
 
   const fetchNotifications = async () => {
     try {
+      // Static data for demonstration
+      const staticNotifications = [
+        {
+          id: '1',
+          type: 'NEW_MESSAGE' as const,
+          message: 'You have a new message from Emmanuel about your medical assistance offer',
+          createdAt: new Date().toISOString(),
+          read: false
+        },
+        {
+          id: '2',
+          type: 'REQUEST_ACCEPTED' as const,
+          message: 'Your request for food assistance has been accepted by Marie',
+          createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+          read: false
+        },
+        {
+          id: '3',
+          type: 'VOLUNTEER_REQUEST' as const,
+          message: 'Jean wants to help with your education support request',
+          createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+          read: true
+        },
+        {
+          id: '4',
+          type: 'NEW_MESSAGE' as const,
+          message: 'New message regarding your transportation assistance request',
+          createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+          read: true
+        }
+      ];
+      
+      setNotifications(staticNotifications);
+      setUnreadCount(staticNotifications.filter((n) => !n.read).length);
+      
+      /* Uncomment when API is ready
       const response = await fetch('/api/notifications')
       const data = await response.json()
       setNotifications(data)
       setUnreadCount(data.filter((n: Notification) => !n.read).length)
+      */
     } catch (error) {
       console.error('Error fetching notifications:', error)
     }

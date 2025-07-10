@@ -131,20 +131,20 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       <button
         onClick={() => router.back()}
-        className="flex items-center mb-6 text-gray-600 hover:text-gray-800 transition-colors"
+        className="flex items-center mb-4 sm:mb-6 text-gray-600 hover:text-gray-800 transition-colors"
       >
         <ArrowLeftIcon className="h-5 w-5 mr-2" />
         Back
       </button>
       
       <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0 mb-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start sm:space-x-4">
+              <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mb-3 sm:mb-0">
                 {profile?.image ? (
                   <img
                     src={profile.image}
@@ -157,7 +157,7 @@ export default function ProfilePage() {
                   </span>
                 )}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 text-center sm:text-left">
                 {isEditing ? (
                   <div className="space-y-3">
                     <input
@@ -179,14 +179,14 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">{profile?.name || user?.email}</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{profile?.name || user?.email}</h1>
                     <p className="text-gray-500">{profile?.email}</p>
                   </div>
                 )}
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-center sm:justify-end space-x-2 mt-2 sm:mt-0">
               {isEditing ? (
                 <>
                   <button
@@ -217,37 +217,37 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
-              <div className="text-2xl font-bold text-blue-600">
+          <div className="mt-4 sm:mt-6 grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-lg text-center">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">
                 {profile?.helpOffered || 0}
               </div>
-              <div className="text-sm text-gray-500">Help Offered</div>
+              <div className="text-xs sm:text-sm text-gray-500">Help Offered</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
-              <div className="text-2xl font-bold text-blue-600">
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-lg text-center">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">
                 {profile?.helpReceived || 0}
               </div>
-              <div className="text-sm text-gray-500">Help Received</div>
+              <div className="text-xs sm:text-sm text-gray-500">Help Received</div>
             </div>
           </div>
         </div>
 
         <Tabs defaultValue="requests" className="w-full">
-          <TabsList className="border-t border-gray-200">
-            <TabsTrigger value="requests" className="w-1/3">
-              Active Requests ({profile?.activeRequests?.length || 0})
+          <TabsList className="border-t border-gray-200 flex">
+            <TabsTrigger value="requests" className="w-1/3 text-xs sm:text-sm py-2">
+              Requests ({profile?.activeRequests?.length || 0})
             </TabsTrigger>
-            <TabsTrigger value="offers" className="w-1/3">
-              Active Offers ({profile?.activeOffers?.length || 0})
+            <TabsTrigger value="offers" className="w-1/3 text-xs sm:text-sm py-2">
+              Offers ({profile?.activeOffers?.length || 0})
             </TabsTrigger>
-            <TabsTrigger value="bookmarks" className="w-1/3">
-              Bookmarked ({profile?.bookmarkedPosts?.length || 0})
+            <TabsTrigger value="bookmarks" className="w-1/3 text-xs sm:text-sm py-2">
+              Saved ({profile?.bookmarkedPosts?.length || 0})
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="requests">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {profile?.activeRequests?.length ? (
                 <div className="space-y-4">
                   {profile.activeRequests.map((request) => (
@@ -255,13 +255,13 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-8">No active help requests</p>
+                <p className="text-gray-500 text-center py-6 sm:py-8">No active help requests</p>
               )}
             </div>
           </TabsContent>
           
           <TabsContent value="offers">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {profile?.activeOffers?.length ? (
                 <div className="space-y-4">
                   {profile.activeOffers.map((offer) => (
@@ -269,32 +269,32 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-8">No active help offers</p>
+                <p className="text-gray-500 text-center py-6 sm:py-8">No active help offers</p>
               )}
             </div>
           </TabsContent>
           
           <TabsContent value="bookmarks">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {profile?.bookmarkedPosts?.length ? (
                 <div className="space-y-4">
                   {profile.bookmarkedPosts.map((post) => (
-                    <div key={post.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div key={post.id} className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                           post.type === 'HELP_REQUEST' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
                         }`}>
-                          {post.type === 'HELP_REQUEST' ? 'Help Request' : 'Help Offer'}
+                          {post.type === 'HELP_REQUEST' ? 'Request' : 'Offer'}
                         </span>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs sm:text-sm text-gray-500">
                           {new Date(post.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{post.title}</h3>
-                      <p className="text-gray-600 mb-3 line-clamp-2">{post.description}</p>
-                      <div className="flex flex-wrap gap-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">{post.title}</h3>
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{post.description}</p>
+                      <div className="flex flex-wrap gap-1 sm:gap-2">
                         {post.categories?.map((category: string) => (
-                          <span key={category} className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 text-gray-700">
+                          <span key={category} className="inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-xs bg-gray-100 text-gray-700">
                             {category}
                           </span>
                         ))}
@@ -303,7 +303,7 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-8">No bookmarked posts</p>
+                <p className="text-gray-500 text-center py-6 sm:py-8">No bookmarked posts</p>
               )}
             </div>
           </TabsContent>

@@ -143,7 +143,7 @@ export default function FeedPage() {
       const allUniquePostIds = new Set([...authoredPostIds, ...participatedPostIds])
 
       // Get average rating from help_interactions if the table exists
-      let averageRating = 4.8 // Default rating
+      let averageRating = 0 // Default rating (zero if no ratings)
       try {
         const { data: ratingData } = await supabase
           .from('help_interactions')
@@ -541,10 +541,10 @@ export default function FeedPage() {
         </div>
       )}
 
-      {/* Floating Create Button - Enhanced mobile positioning */}
+      {/* Floating Create Button - Fixed desktop position */}
       <button
         onClick={handleCreatePost}
-        className={`fixed bottom-6 right-6 sm:bottom-8 sm:right-8 lg:bottom-10 lg:left-10 text-white rounded-full p-4 sm:p-5 shadow-2xl hover:shadow-3xl transition-all duration-300 z-40 transform hover:scale-110 active:scale-95 ${
+        className={`fixed bottom-6 right-6 sm:bottom-8 sm:right-8 lg:bottom-10 lg:right-10 text-white rounded-full p-4 sm:p-5 shadow-2xl hover:shadow-3xl transition-all duration-300 z-40 transform hover:scale-110 active:scale-95 ${
           activeTab === 'help' 
             ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
             : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
