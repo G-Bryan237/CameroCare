@@ -5,6 +5,9 @@ It's design in such a way where both those who help and request help choose the 
 
 Those who request help would be limited to 3 categories but Helpers can't provide as many categories at their will.
 
+Demo login: demo@camerocare.local
+Password: Demo123!
+
 ## New Features
 
 ### 🤝 Enhanced "Offer Help" Experience
@@ -177,3 +180,16 @@ Thank you for visiting my website!
 - **Fast Loading**: Optimized for mobile data connections
 - **Offline Support**: Cache important data for offline viewing
 
+
+
+## Offline demo mode
+
+Demo mode is enabled by default while Supabase is unavailable. No Supabase connection is made in this mode. Run `npm run dev` and open `/feed`.
+
+Sign in with `demo@camerocare.local` / `Demo123!`. The sample accounts `amina@camerocare.local` and `paul@camerocare.local` use the same password. You can also register a local demo account; use invented credentials only.
+
+The demo includes community posts, filtering, creating/deleting your own posts, bookmarks, sharing counts, help conversations, messages, notifications, and profile edits. Data is saved in this browser under `camerocare-demo-v1`; it is not shared between devices or sent to real people. Presence does not simulate other people being online. Shared post URLs show data only if that post exists in the recipient's demo browser.
+
+To reset, clear the `camerocare-demo-v1` local-storage entry and `camerocare-demo-session` cookie for this site, then refresh. To reconnect to Supabase, set `NEXT_PUBLIC_MOCK_MODE=false`, provide the Supabase URL and anonymous key, and rebuild/redeploy. Existing demo records will not be uploaded.
+
+Run `node tests/mock-mode.test.cjs` for the offline flow checks.

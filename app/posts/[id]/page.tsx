@@ -1,3 +1,5 @@
+import { MOCK_MODE } from '@/lib/mock-mode'
+import MockPostPage from '@/components/MockPostPage'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
@@ -8,6 +10,7 @@ interface PageProps {
 
 export default async function PostPage({ params }: PageProps) {
   const { id } = await params
+  if (MOCK_MODE) return <MockPostPage id={id} />
   const supabase = createServerComponentClient({ cookies })
 
   try {

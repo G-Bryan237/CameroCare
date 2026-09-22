@@ -5,7 +5,7 @@ import {
   X, ChevronLeft, ChevronRight, User, MessageSquare, 
   CheckCircle, Star, Shield, Award, Send, Heart, AlertTriangle, MapPin, Clock
 } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 
 const supabase = createClientComponentClient()
 

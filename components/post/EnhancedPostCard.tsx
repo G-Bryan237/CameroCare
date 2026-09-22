@@ -1,5 +1,7 @@
 'use client'
 
+import { apiFetch } from '@/lib/api-fetch'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
@@ -15,7 +17,7 @@ import {
   Shield,
   Star
 } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import { User } from '@supabase/auth-helpers-nextjs'
 
 const supabase = createClientComponentClient()
@@ -279,7 +281,7 @@ export default function EnhancedPostCard({ post, currentUser }: PostCardProps) {
   }
 
   const handleOfferHelp = async (message: string) => {
-    const response = await fetch(`/api/posts/${post.id}/offer-help`, {
+    const response = await apiFetch(`/api/posts/${post.id}/offer-help`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

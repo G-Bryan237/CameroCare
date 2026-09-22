@@ -1,5 +1,7 @@
 'use client'
 
+import { apiFetch } from '@/lib/api-fetch'
+
 import { useState, useEffect } from 'react'
 import { DocumentTextIcon, PencilIcon, TrashIcon, EyeIcon, ArrowLeftIcon } from '@heroicons/react/24/solid'
 import Link from 'next/link'
@@ -31,7 +33,7 @@ export default function ManagePostsPage() {
   const fetchMyPosts = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/posts/my-posts')
+      const response = await apiFetch('/api/posts/my-posts')
       if (response.ok) {
         const data = await response.json()
         setPosts(data)
@@ -47,7 +49,7 @@ export default function ManagePostsPage() {
     if (!confirm('Are you sure you want to delete this post?')) return
 
     try {
-      const response = await fetch(`/api/posts/${postId}`, {
+      const response = await apiFetch(`/api/posts/${postId}`, {
         method: 'DELETE'
       })
       if (response.ok) {

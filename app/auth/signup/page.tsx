@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
 import Logo from '@/components/logo'
+import { MOCK_MODE } from '@/lib/mock-mode'
 
 export default function SignUp() {
   const router = useRouter()
@@ -78,6 +79,7 @@ export default function SignUp() {
             <Logo size="small" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
+          {MOCK_MODE && <p className="mt-2 text-sm text-amber-800">Demo registration only. Use a sample email and password; credentials are stored in this browser.</p>}
           <p className="text-gray-600 mt-1 text-sm">Join the Cameroon Care Community</p>
         </div>
 

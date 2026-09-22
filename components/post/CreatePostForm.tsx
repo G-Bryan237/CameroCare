@@ -1,7 +1,10 @@
 // src/components/post/CreatePostForm.tsx
 'use client'
 
+import { apiFetch } from '@/lib/api-fetch'
+
 import { useState } from 'react'
+import Link from 'next/link'
 import { ASSISTANCE_CATEGORIES } from '@/types'
 import { MapPin } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -85,7 +88,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
     console.log('Submitting post data:', postData)
 
-    const response = await fetch('/api/posts', {
+    const response = await apiFetch('/api/posts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -166,12 +169,12 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     return (
       <div className="text-center py-8">
         <p className="text-gray-600 mb-4">Please sign in to create a post</p>
-        <button
-          onClick={onClose}
+        <Link
+          href="/auth/signin"
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
-          Go Back
-        </button>
+          Sign In
+        </Link>
       </div>
     )
   }

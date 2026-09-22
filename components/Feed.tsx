@@ -1,8 +1,10 @@
 // src/components/Feed.tsx
 'use client'
 
+import { apiFetch } from '@/lib/api-fetch'
+
 import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import type { Session } from '@supabase/auth-helpers-nextjs'
 import EnhancedPostCard from '@/components/post/EnhancedPostCard'
 import { ASSISTANCE_CATEGORIES } from '@/types'
@@ -73,7 +75,7 @@ export default function Feed() {
         type: activeTab,
         ...(selectedCategory && { category: selectedCategory })
       })
-      const response = await fetch(`/api/posts?${params}`)
+      const response = await apiFetch(`/api/posts?${params}`)
       const data = await response.json()
       setPosts(data)
     } catch (error) {

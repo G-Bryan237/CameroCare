@@ -1,6 +1,8 @@
 // src/components/chat/ChatSystem.tsx
 'use client'
 
+import { apiFetch } from '@/lib/api-fetch'
+
 import { useState, useEffect, useRef } from 'react'
 
 // Helper function to format date and time
@@ -39,7 +41,7 @@ export default function Chat({ recipientId, id }: ChatProps) {
 
   const fetchMessages = async () => {
     try {
-      const response = await fetch(`/api/chat/${id}/${recipientId}`)
+      const response = await apiFetch(`/api/chat/${id}/${recipientId}`)
       const data = await response.json()
       setMessages(data)
       scrollToBottom()
@@ -54,7 +56,7 @@ export default function Chat({ recipientId, id }: ChatProps) {
 
     setIsLoading(true)
     try {
-      const response = await fetch('/api/chat/send', {
+      const response = await apiFetch('/api/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

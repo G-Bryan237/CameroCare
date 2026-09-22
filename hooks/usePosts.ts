@@ -1,7 +1,9 @@
 'use client'
 
+import { apiFetch } from '@/lib/api-fetch'
+
 import { useState, useEffect } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import { User } from '@supabase/auth-helpers-nextjs'
 
 const supabase = createClientComponentClient()
@@ -73,7 +75,7 @@ export function usePosts({
         params.append('excludeUserId', currentUser.id)
       }
 
-      const response = await fetch(`/api/posts?${params.toString()}`)
+      const response = await apiFetch(`/api/posts?${params.toString()}`)
       
       if (!response.ok) {
         throw new Error(`Failed to fetch posts: ${response.status}`)

@@ -348,29 +348,31 @@ export default function FeedPage() {
           </div>
 
           {/* Profile Actions - Enhanced mobile design */}
-          <div className="space-y-2 pt-4 border-t border-gray-200">
-            <Link
-              href="/profile"
-              className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
-            >
-              <UserCircleIcon className="h-5 w-5 text-gray-600 mr-3" />
-              <span className="font-medium text-gray-900 text-sm">View Profile</span>
-            </Link>
+          {user && (
+            <div className="space-y-2 pt-4 border-t border-gray-200">
+              <Link
+                href="/profile"
+                className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+              >
+                <UserCircleIcon className="h-5 w-5 text-gray-600 mr-3" />
+                <span className="font-medium text-gray-900 text-sm">View Profile</span>
+              </Link>
 
-            <button className="w-full flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200">
-              <Cog6ToothIcon className="h-5 w-5 text-gray-600 mr-3" />
-              <span className="font-medium text-gray-900 text-sm">Settings</span>
-            </button>
+              <button className="w-full flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200">
+                <Cog6ToothIcon className="h-5 w-5 text-gray-600 mr-3" />
+                <span className="font-medium text-gray-900 text-sm">Settings</span>
+              </button>
 
-            {/* Sign Out Button */}
-            <button 
-              onClick={handleSignOut}
-              className="w-full flex items-center p-3 rounded-xl hover:bg-red-50 transition-all duration-200 text-red-600 hover:text-red-700"
-            >
-              <ArrowRightOnRectangleIcon className="h-5 w-5 mr-3" />
-              <span className="font-medium text-sm">Sign Out</span>
-            </button>
-          </div>
+              {/* Sign Out Button */}
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center p-3 rounded-xl hover:bg-red-50 transition-all duration-200 text-red-600 hover:text-red-700"
+              >
+                <ArrowRightOnRectangleIcon className="h-5 w-5 mr-3" />
+                <span className="font-medium text-sm">Sign Out</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -392,6 +394,14 @@ export default function FeedPage() {
               
               {/* Navigation Icons - Enhanced mobile layout */}
               <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                {!loading && !user && (
+                  <Link
+                    href="/auth/signin"
+                    className="px-3 py-2 text-sm font-semibold text-blue-600 hover:text-blue-800"
+                  >
+                    Sign In
+                  </Link>
+                )}
                 <button className="p-2.5 sm:p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200">
                   <MapPinIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </button>

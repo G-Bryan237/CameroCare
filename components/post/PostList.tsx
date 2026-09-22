@@ -1,6 +1,8 @@
 // src/components/post/PostList.tsx
 'use client'
 
+import { apiFetch } from '@/lib/api-fetch'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
@@ -20,7 +22,7 @@ import {
   Star,
   HandHeart
 } from 'lucide-react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 import { User } from '@supabase/auth-helpers-nextjs'
 import { usePosts } from '@/hooks/usePosts'
 
@@ -100,7 +102,7 @@ function RequestHelpModal({ isOpen, onClose, post, onSubmit }: RequestHelpModalP
     setLoadingStats(true)
     try {
       // Fetch helper's actual statistics
-      const response = await fetch(`/api/users/${post.author_id}/stats`)
+      const response = await apiFetch(`/api/users/${post.author_id}/stats`)
       if (response.ok) {
         const stats = await response.json()
         setHelperStats(stats)
@@ -549,7 +551,7 @@ function PostCard({ post, currentUser }: PostCardProps) {
     const checkBookmarkStatus = async () => {
       if (!currentUser) return
       try {
-        const response = await fetch(`/api/posts/${post.id}/bookmark`)
+        const response = await apiFetch(`/api/posts/${post.id}/bookmark`)
         if (response.ok) {
           const result = await response.json()
           setIsBookmarked(result.isBookmarked)
@@ -599,7 +601,7 @@ function PostCard({ post, currentUser }: PostCardProps) {
 
   const handleOfferHelp = async (message: string) => {
     try {
-      const response = await fetch(`/api/posts/${post.id}/offer-help`, {
+      const response = await apiFetch(`/api/posts/${post.id}/offer-help`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -631,7 +633,7 @@ function PostCard({ post, currentUser }: PostCardProps) {
   }
 
   const handleRequestHelp = async (message: string) => {
-    const response = await fetch(`/api/posts/${post.id}/request-help`, {
+    const response = await apiFetch(`/api/posts/${post.id}/request-help`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -668,7 +670,7 @@ function PostCard({ post, currentUser }: PostCardProps) {
       const newBookmarkedState = !isBookmarked
       setIsBookmarked(newBookmarkedState)
       
-      const response = await fetch(`/api/posts/${post.id}/bookmark`, {
+      const response = await apiFetch(`/api/posts/${post.id}/bookmark`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -731,7 +733,7 @@ function PostCard({ post, currentUser }: PostCardProps) {
 
   const updateShareCount = async (platform: string) => {
     try {
-      const response = await fetch(`/api/posts/${post.id}/share`, {
+      const response = await apiFetch(`/api/posts/${post.id}/share`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

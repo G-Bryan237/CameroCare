@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { Bell, AlertCircle, MessageSquare, Heart, Clock, Calendar } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClientComponentClient } from '@/lib/supabase'
 
 interface Notification {
   id: string

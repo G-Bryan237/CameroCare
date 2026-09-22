@@ -1,8 +1,21 @@
+import { MOCK_MODE } from '@/lib/mock-mode'
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
+  if (MOCK_MODE) {
+    const path = req.nextUrl.pathname
+    // Demo data lives only in the browser; never send demo requests to the live database.
+    if (path.startsWith('/api/')) return NextResponse.json({ message: 'Demo data is available in this browser only.' }, { status: 503 })
+    if (path === '/') return NextResponse.redirect(new URL('/feed', req.url))
+    if (['/profile', '/dashboard', '/manage-posts', '/conversations', '/helper', '/seeker'].some(route => path === route || path.startsWith(route + '/')) && !req.cookies.get('camerocare-demo-session')?.value) {
+      const login = new URL('/auth/signin', req.url)
+      login.searchParams.set('callbackUrl', path)
+      return NextResponse.redirect(login)
+    }
+    return NextResponse.next()
+  }
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req, res })
 

@@ -1,6 +1,8 @@
 // src/app/profile/page.tsx
 'use client'
 
+import { apiFetch } from '@/lib/api-fetch'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
@@ -42,7 +44,7 @@ export default function ProfilePage() {
     
     try {
       setError(null)
-      const response = await fetch(`/api/users/${user.id}`)
+      const response = await apiFetch(`/api/users/${user.id}`)
       
       if (!response.ok) {
         throw new Error(`Failed to fetch profile: ${response.status}`)
@@ -72,7 +74,7 @@ export default function ProfilePage() {
     
     setUpdateLoading(true)
     try {
-      const response = await fetch(`/api/users/${user.id}`, {
+      const response = await apiFetch(`/api/users/${user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

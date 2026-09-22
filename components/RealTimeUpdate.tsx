@@ -3,6 +3,7 @@
 
 import { useEffect } from 'react'
 import socket from '@/lib/socket'
+import { MOCK_MODE } from '@/lib/mock-mode'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface UpdateEvent {
@@ -14,7 +15,7 @@ export default function RealTimeUpdates({ onUpdate }: { onUpdate: (event: Update
   const { user } = useAuth()
 
   useEffect(() => {
-    if (!user) return
+    if (MOCK_MODE || !user) return
 
     socket.connect()
     socket.emit('join', { userId: user.id })
