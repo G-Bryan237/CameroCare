@@ -1,6 +1,8 @@
 // Sign-in page temporarily disabled. Uncomment the original implementation below to restore it.
+import { redirect } from 'next/navigation'
+
 export default function SignIn() {
-  return null
+  redirect('/feed')
 }
 
 // 'use client'

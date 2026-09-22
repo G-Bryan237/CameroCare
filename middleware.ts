@@ -16,7 +16,7 @@ export async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
 
   // Define protected routes that require authentication
-  const protectedRoutes = ['/feed', '/profile', '/dashboard']
+  const protectedRoutes = ['/profile', '/dashboard']
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
 
   // If user is not authenticated and trying to access protected route
@@ -31,14 +31,9 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/feed', req.url))
   }
 
-  // If user is authenticated and visiting root, redirect to feed
-  if (session && pathname === '/') {
+  // Start every visitor on the feed, including guests.
+  if (pathname === '/') {
     return NextResponse.redirect(new URL('/feed', req.url))
-  }
-
-  // If user is not authenticated and visiting root, redirect to signin
-  if (!session && pathname === '/') {
-    return NextResponse.redirect(new URL('/auth/signin', req.url))
   }
 
   return res
