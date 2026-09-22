@@ -9,11 +9,7 @@ export async function proxy(req: NextRequest) {
     // Demo data lives only in the browser; never send demo requests to the live database.
     if (path.startsWith('/api/')) return NextResponse.json({ message: 'Demo data is available in this browser only.' }, { status: 503 })
     if (path === '/') return NextResponse.redirect(new URL('/feed', req.url))
-    if (['/profile', '/dashboard', '/manage-posts', '/conversations', '/helper', '/seeker'].some(route => path === route || path.startsWith(route + '/')) && !req.cookies.get('camerocare-demo-session')?.value) {
-      const login = new URL('/auth/signin', req.url)
-      login.searchParams.set('callbackUrl', path)
-      return NextResponse.redirect(login)
-    }
+    // The browser initializes the demo account, including on direct page visits.
     return NextResponse.next()
   }
   const res = NextResponse.next()

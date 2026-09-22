@@ -765,7 +765,7 @@ function PostCard({ post, currentUser }: PostCardProps) {
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden post-card-hover">
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden post-card-hover">
         {/* Urgent Badge */}
         {post.is_urgent && (
           <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-4 py-2 text-sm font-medium text-center flex items-center justify-center space-x-2">
@@ -1121,9 +1121,9 @@ export default function PostList({ type, categories, excludeOwnPosts = false }: 
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Sort Options with improved mobile spacing */}
-      <div className="flex justify-end space-x-1.5 sm:space-x-2 mb-2">
+    <div className="space-y-5 sm:space-y-7">
+      {/* Sort options live in their own card, separate from the posts */}
+      <div className="flex justify-end gap-1.5 sm:gap-2 rounded-xl border border-gray-200 bg-white p-2 sm:p-3 shadow-sm">
         {(['recent', 'urgent', 'popular'] as const).map((option) => (
           <button
             key={option}
@@ -1140,7 +1140,7 @@ export default function PostList({ type, categories, excludeOwnPosts = false }: 
       </div>
 
       {/* Posts with responsive spacing */}
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-5 sm:space-y-7">
         {sortedPosts.map((post) => (
           <PostCard 
             key={post.id} 

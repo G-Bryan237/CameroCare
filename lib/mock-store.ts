@@ -15,7 +15,7 @@ export function seed() {
     ['Transport for donated books', 'Looking for a volunteer to help move boxes to the community library.', 'Transportation', 'Buea', 'Southwest', 'HELP_REQUEST', 'demo-user'],
     ['French conversation practice', 'Free friendly practice sessions for learners of all levels.', 'Volunteering', 'Yaounde', 'Centre', 'HELP_OFFER', 'demo-user'],
   ]
-  return { userId: null as string | null, tables: {
+  return { previewInitialized: true, userId: 'demo-user' as string | null, tables: {
     profiles,
     accounts: profiles.map(p => ({ id: p.id, email: p.email, password: DEMO_PASSWORD })),
     posts: examples.map((p, i) => ({ id: `demo-post-${i + 1}`, title: p[0], description: p[1], categories: [p[2]], location: p[3], region: p[4], type: p[5], author_id: p[6], status: 'open', is_urgent: i === 0, participant_count: i === 0 ? 1 : 0, bookmarks: 0, shares: 0, created_at: now(), updated_at: now() })),
@@ -29,7 +29,18 @@ export type Store = ReturnType<typeof seed>
 export function readStore(): Store {
   if (typeof window === 'undefined') return seed()
   const saved = window.localStorage.getItem(KEY)
-  if (saved) { try { return JSON.parse(saved) } catch { /* Replace invalid demo data. */ } }
+  if (saved) {
+    try {
+      const data: Store = JSON.parse(saved)
+      // Upgrade existing guest demos once without discarding their saved changes.
+      if (!data.previewInitialized) {
+        data.userId = data.userId || 'demo-user'
+        data.previewInitialized = true
+        saveStore(data)
+      }
+      return data
+    } catch { /* Replace invalid demo data. */ }
+  }
   const data = seed(); saveStore(data); return data
 }
 export function saveStore(data: Store) { if (typeof window !== 'undefined') window.localStorage.setItem(KEY, JSON.stringify(data)) }

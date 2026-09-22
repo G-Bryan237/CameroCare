@@ -1,7 +1,7 @@
 // src/app/feed/page.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ASSISTANCE_CATEGORIES } from '@/types'
 import PostList from '@/components/post/PostList'
 import Logo from '@/components/logo'
@@ -45,6 +45,9 @@ export default function FeedPage() {
   const [user, setUser] = useState<User | null>(null)
   const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [headerVisible, setHeaderVisible] = useState(true)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const lastScrollTopRef = useRef(0)
   const router = useRouter()
 
   useEffect(() => {
@@ -71,6 +74,29 @@ export default function FeedPage() {
     })
 
     return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current
+    if (!scrollContainer) return
+
+    const handleScroll = () => {
+      const currentScrollTop = scrollContainer.scrollTop
+      const scrollDifference = currentScrollTop - lastScrollTopRef.current
+
+      if (currentScrollTop <= 12) {
+        setHeaderVisible(true)
+      } else if (scrollDifference > 6) {
+        setHeaderVisible(false)
+      } else if (scrollDifference < -6) {
+        setHeaderVisible(true)
+      }
+
+      lastScrollTopRef.current = currentScrollTop
+    }
+
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
+    return () => scrollContainer.removeEventListener('scroll', handleScroll)
   }, [])
 
   // Fetch user statistics from database with enhanced accuracy
@@ -237,7 +263,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
+    <div className="min-h-0 flex-1 overflow-hidden bg-gray-50 flex flex-col lg:flex-row">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
@@ -248,25 +274,25 @@ export default function FeedPage() {
 
       {/* Sidebar - Enhanced mobile responsiveness */}
       <div className={`
-        fixed inset-y-0 right-0 z-50 w-full max-w-xs sm:max-w-sm bg-white shadow-xl transform transition-transform duration-300 ease-in-out
-        lg:relative lg:translate-x-0 lg:shadow-none lg:border-l lg:border-gray-200 lg:w-80 lg:max-w-none
+        fixed inset-y-0 right-0 z-50 flex h-dvh flex-col w-full max-w-xs sm:max-w-sm bg-white shadow-xl transform transition-transform duration-300 ease-in-out
+        lg:left-0 lg:right-auto lg:translate-x-0 lg:shadow-none lg:border-r lg:border-gray-200 lg:w-80 lg:max-w-none
         ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Dashboard</h2>
+        <div className="absolute right-3 top-3 z-10">
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-md hover:bg-gray-100 transition-colors"
+            className="lg:hidden p-2 rounded-md bg-white/80 hover:bg-gray-100 transition-colors"
+            aria-label="Close sidebar"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
         
-        <div className="p-4 space-y-6 max-h-[calc(100vh-80px)] overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 space-y-2">
           {/* User Profile Section - Enhanced mobile layout */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3">
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                 {getUserInitials()}
               </div>
               <div className="min-w-0 flex-1">
@@ -276,26 +302,26 @@ export default function FeedPage() {
             </div>
 
             {/* Stats Grid - Mobile optimized */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-center bg-white/50 rounded-lg p-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="text-center bg-white/50 rounded-lg p-2">
                 <div className="text-lg font-bold text-blue-600">
                   {loading ? '...' : userStats?.helpsGiven || 0}
                 </div>
                 <div className="text-xs text-gray-600">Helps Given</div>
               </div>
-              <div className="text-center bg-white/50 rounded-lg p-3">
+              <div className="text-center bg-white/50 rounded-lg p-2">
                 <div className="text-lg font-bold text-green-600">
                   {loading ? '...' : userStats?.helpsReceived || 0}
                 </div>
                 <div className="text-xs text-gray-600">Helps Received</div>
               </div>
-              <div className="text-center bg-white/50 rounded-lg p-3">
+              <div className="text-center bg-white/50 rounded-lg p-2">
                 <div className="text-lg font-bold text-yellow-600">
                   {loading ? '...' : userStats?.averageRating.toFixed(1) || '0.0'}★
                 </div>
                 <div className="text-xs text-gray-600">Rating</div>
               </div>
-              <div className="text-center bg-white/50 rounded-lg p-3">
+              <div className="text-center bg-white/50 rounded-lg p-2">
                 <div className="text-lg font-bold text-purple-600">
                   {loading ? '...' : userStats?.totalPosts || 0}
                 </div>
@@ -305,16 +331,16 @@ export default function FeedPage() {
           </div>
 
           {/* Post Management Section - Improved mobile layout */}
-          <div className="space-y-4">
+          <div className="space-y-2">
             <h3 className="text-sm font-semibold text-gray-900 flex items-center">
               <DocumentTextIcon className="h-4 w-4 mr-2" />
               Quick Actions
             </h3>
             
-            <div className="space-y-3">
+            <div className="space-y-2">
               <Link
                 href="/seeker"
-                className="flex items-center p-3 rounded-xl bg-red-50 hover:bg-red-100 transition-all duration-200 border border-red-100"
+                className="flex items-center px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 transition-all duration-200 border border-red-100"
               >
                 <UserGroupIcon className="h-5 w-5 text-red-600 mr-3 flex-shrink-0" />
                 <div className="min-w-0">
@@ -325,7 +351,7 @@ export default function FeedPage() {
 
               <Link
                 href="/helper"
-                className="flex items-center p-3 rounded-xl bg-blue-50 hover:bg-blue-100 transition-all duration-200 border border-blue-100"
+                className="flex items-center px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 transition-all duration-200 border border-blue-100"
               >
                 <HeartIcon className="h-5 w-5 text-blue-600 mr-3 flex-shrink-0" />
                 <div className="min-w-0">
@@ -336,7 +362,7 @@ export default function FeedPage() {
 
               <Link
                 href="/manage-posts"
-                className="w-full flex items-center p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all duration-200 border border-gray-200"
+                className="w-full flex items-center px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all duration-200 border border-gray-200"
               >
                 <DocumentTextIcon className="h-5 w-5 text-gray-600 mr-3" />
                 <div className="min-w-0">
@@ -349,16 +375,16 @@ export default function FeedPage() {
 
           {/* Profile Actions - Enhanced mobile design */}
           {user && (
-            <div className="space-y-2 pt-4 border-t border-gray-200">
+            <div className="space-y-1 pt-2 border-t border-gray-200">
               <Link
                 href="/profile"
-                className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                className="flex items-center px-3 py-2 rounded-xl hover:bg-gray-50 transition-all duration-200"
               >
                 <UserCircleIcon className="h-5 w-5 text-gray-600 mr-3" />
                 <span className="font-medium text-gray-900 text-sm">View Profile</span>
               </Link>
 
-              <button className="w-full flex items-center p-3 rounded-xl hover:bg-gray-50 transition-all duration-200">
+              <button className="w-full flex items-center px-3 py-2 rounded-xl hover:bg-gray-50 transition-all duration-200">
                 <Cog6ToothIcon className="h-5 w-5 text-gray-600 mr-3" />
                 <span className="font-medium text-gray-900 text-sm">Settings</span>
               </button>
@@ -366,7 +392,7 @@ export default function FeedPage() {
               {/* Sign Out Button */}
               <button
                 onClick={handleSignOut}
-                className="w-full flex items-center p-3 rounded-xl hover:bg-red-50 transition-all duration-200 text-red-600 hover:text-red-700"
+                className="w-full flex items-center px-3 py-2 rounded-xl hover:bg-red-50 transition-all duration-200 text-red-600 hover:text-red-700"
               >
                 <ArrowRightOnRectangleIcon className="h-5 w-5 mr-3" />
                 <span className="font-medium text-sm">Sign Out</span>
@@ -377,47 +403,49 @@ export default function FeedPage() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div ref={scrollContainerRef} className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain lg:ml-80">
         {/* Header - Enhanced mobile responsiveness */}
-        <header className="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-100">
-          <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+        <header className={`bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-30 border-b border-gray-100 transition-transform duration-300 ease-out ${
+          headerVisible ? 'translate-y-0' : '-translate-y-full'
+        }`}>
+          <div className="px-3 sm:px-5 lg:px-6 py-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
-                <div className="w-8 sm:w-10 lg:w-32 flex-shrink-0">
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                <div className="w-7 sm:w-8 lg:w-24 flex-shrink-0">
                   <Logo />
                 </div>
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">
+                <h1 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 truncate">
                   <span className="hidden sm:inline">Cameroon Care Community</span>
                   <span className="sm:hidden">CameroCare</span>
                 </h1>
               </div>
               
               {/* Navigation Icons - Enhanced mobile layout */}
-              <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+              <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
                 {!loading && !user && (
                   <Link
                     href="/auth/signin"
-                    className="px-3 py-2 text-sm font-semibold text-blue-600 hover:text-blue-800"
+                    className="px-2 py-1.5 text-sm font-semibold text-blue-600 hover:text-blue-800"
                   >
                     Sign In
                   </Link>
                 )}
-                <button className="p-2.5 sm:p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200">
-                  <MapPinIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200">
+                  <MapPinIcon className="h-5 w-5" />
                 </button>
                 <Notifications />
                 <Link 
                   href="/conversations" 
-                  className="p-2.5 sm:p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200"
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
                   title="Messages"
                 >
-                  <ChatBubbleLeftRightIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <ChatBubbleLeftRightIcon className="h-5 w-5" />
                 </Link>
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="lg:hidden p-2.5 sm:p-3 rounded-xl hover:bg-gray-100 transition-all duration-200"
+                  className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-all duration-200"
                 >
-                  <Bars3Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <Bars3Icon className="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -508,8 +536,8 @@ export default function FeedPage() {
             </Menu>
           </div>
 
-          {/* Posts Container */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[400px]">
+          {/* Posts and sorting render as separate cards inside PostList */}
+          <div className="min-h-[400px]">
             <PostList 
               key={refreshKey}
               type={activeTab} 

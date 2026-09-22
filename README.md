@@ -186,7 +186,7 @@ Thank you for visiting my website!
 
 Demo mode is enabled by default while Supabase is unavailable. No Supabase connection is made in this mode. Run `npm run dev` and open `/feed`.
 
-Sign in with `demo@camerocare.local` / `Demo123!`. The sample accounts `amina@camerocare.local` and `paul@camerocare.local` use the same password. You can also register a local demo account; use invented credentials only.
+Visitors are automatically signed in as Alex Demo on their first visit, with no demo banner. Existing guest demos are upgraded without losing saved data. Explicit sign-out still works. To sign back in, use `demo@camerocare.local` / `Demo123!`. The sample accounts `amina@camerocare.local` and `paul@camerocare.local` use the same password. You can also register a local demo account; use invented credentials only.
 
 The demo includes community posts, filtering, creating/deleting your own posts, bookmarks, sharing counts, help conversations, messages, notifications, and profile edits. Data is saved in this browser under `camerocare-demo-v1`; it is not shared between devices or sent to real people. Presence does not simulate other people being online. Shared post URLs show data only if that post exists in the recipient's demo browser.
 
