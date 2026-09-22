@@ -30,14 +30,19 @@ function SignInForm() {
       })
 
       if (error) {
-        setError(error.message)
+        // Handle specific rate limit error
+        if (error.message.includes('rate limit') || error.message.includes('429')) {
+          setError('Too many sign-in attempts. Please wait a few minutes before trying again.')
+        } else {
+          setError(error.message)
+        }
       } else {
-        // Get the callback URL from search params, default to /feed
         const callbackUrl = searchParams.get('callbackUrl') || '/feed'
         router.push(callbackUrl)
         router.refresh()
       }
-    } catch {
+    } catch (err) {
+      console.error('Sign in error:', err)
       setError('An error occurred. Please try again.')
     } finally {
       setIsLoading(false)
@@ -89,8 +94,8 @@ function SignInForm() {
           
           <button 
             onClick={handleSubmit} 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 transform hover:scale-105"
-            disabled={isLoading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading || !formData.email || !formData.password}
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
